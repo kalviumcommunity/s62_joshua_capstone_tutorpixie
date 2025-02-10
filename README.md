@@ -1,5 +1,4 @@
 # TutorPixie
-
 One on One online tutoring platform to connect students from across the globe to quality tutors with a comprehensive dashboard to schedule classes and for invoicing.
 
 ---
