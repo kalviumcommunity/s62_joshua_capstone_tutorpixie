@@ -16,8 +16,9 @@ One on One online tutoring platform to connect students from across the globe to
 
 - To run the backend server to serve API endpoints.
 
-### Frontend: ReactJS, TailwindCSS
+### Frontend: NextJS, ReactJS, TailwindCSS
 
+- Use of NextJS for better SEO and server side components.
 - For a smooth interactive UI for the users.
 - Login functionality for students, teachers, and admins.
 - Student, Teacher and Admin dashboards.
@@ -45,11 +46,7 @@ One on One online tutoring platform to connect students from across the globe to
 
 ### Nodemailer:
 
-- send invoices and other notifications to the students and teachers.
-
-### React Helmet:
-
-- SEO optimization.
+- send invoices and other notifications to the students and teachers
 
 ### GrapQL:
 
