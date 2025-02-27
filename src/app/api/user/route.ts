@@ -33,7 +33,7 @@ export async function POST(req: Request) {
             return NextResponse.json({message: "user already exists", success: false}, {status: 409})
         }
 
-        const hashPassword = bcrypt.hash(password, 10);
+        const hashPassword = await bcrypt.hash(password, 10);
         if(!hashPassword){
             return NextResponse.json({message: "error in hashing password", success: false}, {status: 400});
         }
