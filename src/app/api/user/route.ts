@@ -46,3 +46,14 @@ export async function POST(req: Request) {
         return NextResponse.json({message: "Internal Server Error", success: false});
     }
 }
+
+export async function PUT(req: Request){
+    try {
+        const body = await req.json();
+        const user = await prisma.user.update({where: {id: body.id}, data: {...body}});
+        return NextResponse.json(user);
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({message: "Internal Server Error", success: false});
+    }
+}
