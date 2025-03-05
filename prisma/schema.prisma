@@ -19,18 +19,61 @@ enum userStatus {
   Paused
 }
 
+enum userRole {
+  Tutor
+  Student
+  Admin
+}
+
 model user {
-  id         Int         @id @default(autoincrement())
-  email      String      @unique
-  password   String
-  name       String?
-  userStatus userStatus? @default(Active)
-  role       String?
-  address    Json?
-  phone      Int?
-  Student    Student?
-  Tutor      Tutor?
-  createdAt  DateTime    @default(now())
+  id            Int         @id @default(autoincrement())
+  email         String?     @unique
+  password      String? // Optional if using OAuth
+  name          String?
+  image         String? // Required for OAuth
+  emailVerified DateTime? // Used for email verification
+  userStatus    userStatus? @default(Active)
+  role          userRole?   @default(Student)
+  address       String?
+  country       String?
+  city          String?
+  phone         String?
+  Student       Student?
+  Tutor         Tutor?
+  createdAt     DateTime    @default(now())
+
+  // NextAuth Relations
+  accounts Account[]
+  sessions Session[]
+}
+
+//Account and Session are required for 
+model Account {
+  id                String  @id @default(cuid())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Student {
@@ -42,7 +85,7 @@ model Student {
   currency      String?        @default("USD")
   tutorStudents TutorStudent[]
   user          user           @relation(fields: [userId], references: [id])
-  sessions      Session[]      @relation("StudentSessions")
+  sessions      ClassSession[] @relation("StudentSessions")
 }
 
 model Tutor {
@@ -52,7 +95,7 @@ model Tutor {
   qualifications String?
   tutorStudents  TutorStudent[]
   user           user           @relation(fields: [userId], references: [id])
-  sessions       Session[]      @relation("TutorSessions")
+  sessions       ClassSession[] @relation("TutorSessions")
 }
 
 model TutorStudent {
@@ -76,7 +119,7 @@ enum status {
   Completed
 }
 
-model Session {
+model ClassSession {
   id        Int      @id @default(autoincrement())
   subject   String
   tutorId   Int

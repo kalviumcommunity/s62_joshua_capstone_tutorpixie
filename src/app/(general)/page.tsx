@@ -1,9 +1,10 @@
 import TestimonialCard from "./TestimonialCard";
 import Hero from "./HomeHero";
 import OfferApproach from "./OfferApproach";
-import DemoSession from './DemoSession'
+import DemoSession from './DemoSession';
 
-export default function Home() {
+export default async function Home() {
+
   return (
     <>
       <Hero/>
