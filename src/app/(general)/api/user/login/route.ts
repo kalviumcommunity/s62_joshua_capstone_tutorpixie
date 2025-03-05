@@ -13,7 +13,7 @@ export async function POST(req: Request) {
             return NextResponse.json({message: "user not found", success: false}, {status: 409})
         }
 
-        return NextResponse.json({message: 'User Login Successfull', success: true}, {status: 400});
+        return NextResponse.json({message: 'User Login Successfull', success: true});
     } catch (error) {
         console.error(error);
         return NextResponse.json({message: "Internal Server Error", success: false});

@@ -3,10 +3,8 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
-    console.log("Signup called")
     try {
         const body = await req.json();
-        console.log(body);
         if(!body.email || !body.password){
             return NextResponse.json({message: "Email and password are required", success: false}, {status: 400});
         }
