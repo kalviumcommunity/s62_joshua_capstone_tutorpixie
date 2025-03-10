@@ -4,6 +4,7 @@ import {prisma} from '@/lib/db'
 export async function GET(){
     try {
         const users = await prisma.user.findMany()
+        console.log("users", users);
 
         if (!users || users.length === 0) {
             return NextResponse.json({

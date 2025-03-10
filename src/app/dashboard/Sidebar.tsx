@@ -37,12 +37,12 @@ const Sidebar: React.FC<SidebarProps> = () => {
           icon: Home 
         },
         { 
-          href: '/billing', 
+          href: './billing', 
           label: 'Billing', 
           icon: DollarSign 
         },
         { 
-          href: '/subjects', 
+          href: './subjects', 
           label: 'Subjects', 
           icon: Book,
           addon: <span className="ml-auto bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">+</span>
