@@ -13,7 +13,7 @@ const ClassesTab: React.FC<{name: string, type: string, classList: {subject: str
             classList.map((item, index) => (
                 <ClassCard key={index} subject={item.subject} time={item.time} date={item.date} type={type} />
             ))
-        }
+        };
       </div>
     </div>
   );
