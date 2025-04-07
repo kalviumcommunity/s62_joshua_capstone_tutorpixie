@@ -20,6 +20,7 @@ enum userStatus {
 }
 
 enum userRole {
+  User
   Tutor
   Student
   Admin
@@ -33,7 +34,7 @@ model user {
   image         String? // Required for OAuth
   emailVerified DateTime? // Used for email verification
   userStatus    userStatus? @default(Active)
-  role          userRole?   @default(Student)
+  role          userRole?   @default(User)
   address       String?
   country       String?
   city          String?
@@ -127,6 +128,7 @@ model ClassSession {
   start     DateTime
   end       DateTime
   meetlink  String?
+  tutorReq  Boolean
   status    status   @default(Pending)
 
   tutor   Tutor   @relation("TutorSessions", fields: [tutorId], references: [userId])
