@@ -30,19 +30,28 @@ export async function GET() {
 export async function POST(req: Request){
     try {
         const {subject, tutorId, studentId, start, end} = await req.json();
-
-        const tutorExists = await prisma.student.findUnique({where: {id: tutorId}});
-        const studentExists = await prisma.tutor.findUnique({where: {id: studentId}});
-
         if(!subject || !tutorId || !studentId || !start || !end){
-            return NextResponse.json({message: "Enter all necessary fields", success: false});
+            return NextResponse.json({message: "Enter all necessary fields", success: false}, {status:401});
         }
 
-        const newClass = await prisma.classSession.create({subject, tutorId, studentId, start, end});
+        const tutorExists = await prisma.user.findUnique({where: {id: tutorId, role: "Tutor"}});
+        const studentExists = await prisma.user.findUnique({where: {id: studentId, role: "Student"}});
 
-        NextResponse.json({message:"Class created", success: true, newClass})
+        if(!studentExists){
+            return NextResponse.json({message: "Student Not Found", success: false}, {status:401});
+        }
+
+        if(!tutorExists){
+            return NextResponse.json({message: "Tutor Not Found", success: false}, {status:401});
+        }
+
+        const newClass = await prisma.classSession.create({
+            data: { subject, tutorId, studentId, start, end }
+        });
+
+        return NextResponse.json({message:"Class created", success: true, newClass})
     } catch (error) {
         console.log(error.message);
-        return NextResponse.json({message: "Internal server error in fetching classes", success: false});
+        return NextResponse.json({message: "Internal server error in creating classes", success: false}, {status:500});
     }
 }

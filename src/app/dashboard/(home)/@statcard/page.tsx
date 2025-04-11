@@ -1,6 +1,6 @@
 import React from "react";
 
-const Card = ({ title, children }) => (
+const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="bg-white rounded-2xl shadow-md p-4 flex-1 min-h-32 flex flex-col justify-around items-center">
     <h3 className="font-semibold text-2xl text-gray-900">{title}</h3>
     <div className="mt-1">{children}</div>

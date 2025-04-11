@@ -70,7 +70,7 @@ const Navbar = () => {
               </Link>
               <SignOutBtn/>
               {
-                (session.user.role!='User')&&
+                (session.user?.role !== 'User' && session.user?.role !== undefined)&&
                 <Link href="/dashboard">
                   <button className="w-full text-center px-3 py-2 rounded-md text-base font-medium bg-black text-white hover:bg-gray-800">
                     Dashboard
