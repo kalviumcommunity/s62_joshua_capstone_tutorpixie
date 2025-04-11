@@ -20,31 +20,45 @@ enum userStatus {
 }
 
 enum userRole {
+  User
   Tutor
   Student
   Admin
 }
 
 model user {
-  id            Int         @id @default(autoincrement())
-  email         String?     @unique
-  password      String? // Optional if using OAuth
-  name          String?
-  image         String? // Required for OAuth
-  emailVerified DateTime? // Used for email verification
-  userStatus    userStatus? @default(Active)
-  role          userRole?   @default(Student)
-  address       String?
-  country       String?
-  city          String?
-  phone         String?
-  Student       Student?
-  Tutor         Tutor?
-  createdAt     DateTime    @default(now())
+  id                   Int         @id @default(autoincrement())
+  email                String?     @unique
+  password             String? // Optional if using OAuth
+  name                 String?
+  image                String? // Required for OAuth
+  emailVerified        DateTime? // Used for email verification
+  userStatus           userStatus? @default(Active)
+  role                 userRole?   @default(User)
+  address              String?
+  country              String?
+  city                 String?
+  phone                String?
+  subjects             String[]
+  createdAt            DateTime    @default(now())
+  //tutor specific fields
+  grades               String?
+  highestQualification String?
+  //student specific fields
+  parentName           String?
+  parentPhone          String?
+  parentEmail          String?
+  grade                String?
+  perHr                Int?
+  billingCurrency      String?
 
   // NextAuth Relations
-  accounts Account[]
-  sessions Session[]
+  tutorToStudents TutorStudent[] @relation("TutorToStudents")
+  studentToTutors TutorStudent[] @relation("StudentToTutors")
+  tutorSessions   ClassSession[] @relation("TutorSessions")
+  studentSessions ClassSession[] @relation("StudentSessions")
+  accounts        Account[]
+  sessions        Session[]
 }
 
 //Account and Session are required for 
@@ -76,28 +90,6 @@ model Session {
   user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Student {
-  userId        Int            @id
-  grade         String?
-  subjects      String[]
-  parentDetails Json?
-  fee           Int?
-  currency      String?        @default("USD")
-  tutorStudents TutorStudent[]
-  user          user           @relation(fields: [userId], references: [id])
-  sessions      ClassSession[] @relation("StudentSessions")
-}
-
-model Tutor {
-  userId         Int            @id
-  grades         String[]
-  subjects       String[]
-  qualifications String?
-  tutorStudents  TutorStudent[]
-  user           user           @relation(fields: [userId], references: [id])
-  sessions       ClassSession[] @relation("TutorSessions")
-}
-
 model TutorStudent {
   id        Int      @id @default(autoincrement())
   tutorId   Int
@@ -105,8 +97,8 @@ model TutorStudent {
   subject   String
   createdAt DateTime @default(now())
 
-  tutor   Tutor   @relation(fields: [tutorId], references: [userId])
-  student Student @relation(fields: [studentId], references: [userId])
+  tutor   user @relation("TutorToStudents", fields: [tutorId], references: [id])
+  student user @relation("StudentToTutors", fields: [studentId], references: [id])
 
   @@unique([tutorId, studentId, subject])
 }
@@ -127,10 +119,11 @@ model ClassSession {
   start     DateTime
   end       DateTime
   meetlink  String?
+  tutorReq  Boolean
   status    status   @default(Pending)
 
-  tutor   Tutor   @relation("TutorSessions", fields: [tutorId], references: [userId])
-  student Student @relation("StudentSessions", fields: [studentId], references: [userId])
+  tutor   user @relation("TutorSessions", fields: [tutorId], references: [id])
+  student user @relation("StudentSessions", fields: [studentId], references: [id])
 
   @@unique([tutorId, start, end])
   @@unique([studentId, start, end])

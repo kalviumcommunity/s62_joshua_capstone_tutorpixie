@@ -69,11 +69,14 @@ const Navbar = () => {
                 </button>
               </Link>
               <SignOutBtn/>
-              <Link href="/dashboard">
-                <button className="w-full text-center px-3 py-2 rounded-md text-base font-medium bg-black text-white hover:bg-gray-800">
-                  Dashboard
-                </button>
-              </Link>
+              {
+                (session.user.role!='User')&&
+                <Link href="/dashboard">
+                  <button className="w-full text-center px-3 py-2 rounded-md text-base font-medium bg-black text-white hover:bg-gray-800">
+                    Dashboard
+                  </button>
+                </Link>
+              }
             </div>
           )}
 
