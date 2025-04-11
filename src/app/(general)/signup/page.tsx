@@ -6,9 +6,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 export default function Signup() {
-    const router = useRouter();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  let usertype = searchParams.get("type")||"User";
+  usertype = usertype.charAt(0).toUpperCase() + usertype.slice(1);
+  if(usertype!="Student" && usertype!="Tutor"){
+    usertype = "User";
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -166,7 +174,7 @@ export default function Signup() {
       
       try {
         // Replace with your actual API endpoint
-        const data = await axios.post('/api/user/signup', formData);
+        const data = await axios.post('/api/user/signup', {...formData, role:usertype});
 
         console.log("data", data);
         

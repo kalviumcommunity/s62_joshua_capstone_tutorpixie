@@ -7,7 +7,7 @@ export default async function dashboard(){
     const userType = session?.user?.role;
 
     return <>
-        <h1 className="text-2xl font-bold mb-6">
+        <h1 className="text-2xl font-bold mb-5">
             {userType === 'Student' ? 'Student Dashboard' : (userType==='Admin')?"Admin Dashboard":'Tutor Dashboard'}
         </h1>
     </>

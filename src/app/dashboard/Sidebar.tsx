@@ -6,7 +6,10 @@ import {
   Home, 
   DollarSign, 
   Book, 
-  LogOut 
+  LogOut,
+  ArrowRightLeft,
+  UserPlus,
+  HomeIcon
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
@@ -29,25 +32,53 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = () => {
     const {data: session} = useSession();
+    let menuItems = [];
 
-    const menuItems = [
-        { 
-          href: '/dashboard', 
-          label: 'My Classes', 
-          icon: Home 
+    if(session?.user?.role == "Admin"){
+      menuItems = [
+        {
+          href: '/dashboard/',
+          label: 'Home',
+          icon: HomeIcon
         },
-        { 
-          href: './billing', 
+        {
+          href: '/dashboard/admin/assign-tutor',
+          label: 'Assign Tutors',
+          icon: ArrowRightLeft
+        },
+        {
+
+          href: '/dashboard/admin/billing', 
           label: 'Billing', 
           icon: DollarSign 
         },
-        { 
-          href: './subjects', 
-          label: 'Subjects', 
-          icon: Book,
-          addon: <span className="ml-auto bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">+</span>
+        {
+
+          href: '/dashboard/admin/add-user', 
+          label: 'Add Users', 
+          icon: UserPlus 
         }
-    ]
+      ]
+    }else{
+      menuItems = [
+          { 
+            href: '/dashboard', 
+            label: 'My Classes', 
+            icon: Home 
+          },
+          { 
+            href: './billing', 
+            label: 'Billing', 
+            icon: DollarSign 
+          },
+          { 
+            href: './subjects', 
+            label: 'Subjects', 
+            icon: Book,
+            addon: <span className="ml-auto bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">+</span>
+          }
+      ]
+    }
 
   return (
     <div className={`bg-gray-900 text-white w-64 h-full flex flex-col`}>

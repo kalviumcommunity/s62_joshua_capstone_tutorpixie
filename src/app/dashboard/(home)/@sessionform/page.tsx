@@ -18,8 +18,8 @@ const SessionForm = () => {
   };
 
   return (
-    <div className="bg-gray-900 text-white p-6 my-4 rounded-2xl w-100">
-      <h2 className="text-lg font-semibold text-center">Request a Session</h2>
+    <div className="bg-gray-900 text-white p-5 my-4 rounded-2xl w-100">
+      <h2 className="text-lg h-5 font-semibold text-center">Request a Session</h2>
 
       {/* Toggle Buttons */}
       <div className="flex mt-4 bg-gray-700 rounded-lg p-1">
@@ -90,9 +90,9 @@ const SessionForm = () => {
 
       {/* Repeating Days */}
       {sessionType === "repeating" && (
-        <div className="mt-4">
+        <div className="mt-3">
           <p className="text-sm text-gray-300">Repeating Every:</p>
-          <div className="flex justify-around gap-2 mt-2">
+          <div className="flex justify-around gap-2 mt-1">
             {["MO", "TU", "WE", "TH", "FR", "SA", "SU"].map((day, index) => (
               <button
                 key={index}
