@@ -52,6 +52,6 @@ export async function POST(req: Request){
         return NextResponse.json({message:"Class created", success: true, newClass})
     } catch (error) {
         console.log(error.message);
-        return NextResponse.json({message: "Internal server error in fetching classes", success: false}, {status:500});
+        return NextResponse.json({message: "Internal server error in creating classes", success: false}, {status:500});
     }
 }
