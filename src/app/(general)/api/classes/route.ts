@@ -31,16 +31,18 @@ export async function POST(req: Request){
     try {
         const {subject, tutorId, studentId, start, end} = await req.json();
 
-        const tutorExists = await prisma.student.findUnique({where: {id: tutorId}});
-        const studentExists = await prisma.tutor.findUnique({where: {id: studentId}});
+        const tutorExists = await prisma.user.findUnique({where: {id: tutorId, role: "Tutor"}});
+        const studentExists = await prisma.user.findUnique({where: {id: studentId, role: "Student"}});
 
         if(!subject || !tutorId || !studentId || !start || !end){
             return NextResponse.json({message: "Enter all necessary fields", success: false});
         }
 
-        const newClass = await prisma.classSession.create({subject, tutorId, studentId, start, end});
+        const newClass = await prisma.classSession.create({
+            data: { subject, tutorId, studentId, start, end }
+        });
 
-        NextResponse.json({message:"Class created", success: true, newClass})
+        return NextResponse.json({message:"Class created", success: true, newClass})
     } catch (error) {
         console.log(error.message);
         return NextResponse.json({message: "Internal server error in fetching classes", success: false});
