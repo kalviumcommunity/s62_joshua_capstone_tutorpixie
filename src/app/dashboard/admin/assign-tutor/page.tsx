@@ -85,7 +85,8 @@ const TutorStudentSubjectsComponent: React.FC = () => {
     console.log(formData);
     try {
       const res = await axios.post('/api/user/relation',formData);
-      console.log(res);
+      console.log(res.data.data);
+      setData(prev=>[...prev, res.data.data])
       setIsAssignNewTutor(false);
     } catch (error) {
       console.log(`unable to update tutor-student relation: ${error}`)
