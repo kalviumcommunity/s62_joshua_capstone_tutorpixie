@@ -6,7 +6,7 @@ const ClassesTab: React.FC<{name: string, type: string, classList: {subject: str
     {subject: "English", time: "9-10pm", date: "Sat 3rd Feb", type: "confirmed"}]}) => {
 
   return (
-    <div className="bg-gray-800 text-white p-6 rounded-lg m-4 w-full">
+    <div className="bg-gray-800 text-white p-6 rounded-lg m-4 w-full max-w-1/2">
       <h2 className="text-xl font-bold mb-4">{name}</h2>
       <div className="space-y-4 max-h-90 overflow-auto">
         {
