@@ -9,9 +9,9 @@ export async function GET() {
 
         let classes;
 
-        // if(!session?.user){
-        //     return NextResponse.json({message: "User not logged in", success: false});
-        // }
+        if(!session?.user){
+            return NextResponse.json({message: "User not logged in", success: false});
+        }
 
         if(session?.user?.role == "Student"){
             classes = await prisma.classSession.findMany({where: {studentId: session?.user?.id}});
