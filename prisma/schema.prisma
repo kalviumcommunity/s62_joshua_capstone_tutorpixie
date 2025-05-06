@@ -112,19 +112,22 @@ enum status {
 }
 
 model ClassSession {
-  id        Int      @id @default(autoincrement())
-  subject   String
-  tutorId   Int
-  studentId Int
-  start     DateTime
-  end       DateTime
-  meetlink  String?
-  tutorReq  Boolean
-  status    status   @default(Pending)
+  id            Int      @id @default(autoincrement())
+  subject       String
+  tutorId       Int
+  studentId     Int
+  startTime     DateTime
+  endTime       DateTime
+  meetlink      String?
+  tutorApprov   Boolean  @default(false)
+  studentApprov Boolean  @default(false)
+  repeating     Boolean  @default(false)
+  repeatingDays Int[]    @default([])
+  status        status   @default(Pending)
 
   tutor   user @relation("TutorSessions", fields: [tutorId], references: [id])
   student user @relation("StudentSessions", fields: [studentId], references: [id])
 
-  @@unique([tutorId, start, end])
-  @@unique([studentId, start, end])
+  @@unique([tutorId, startTime, endTime])
+  @@unique([studentId, startTime, endTime])
 }
