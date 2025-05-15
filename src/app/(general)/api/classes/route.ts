@@ -12,13 +12,17 @@ export async function GET() {
         if(!session?.user){
             return NextResponse.json({message: "User not logged in", success: false});
         }
+        const userType=session?.user?.role;
 
-        if(session?.user?.role == "Student"){
+        if(userType == "Student"){
             classes = await prisma.classSession.findMany({where: {studentId: session?.user?.id}});
-        }else{
+        }else if(userType=="Tutor"){
             classes = await prisma.classSession.findMany({where: {tutorId: session?.user?.id}});
+        }else if(userType=="Admin"){
+            classes = await prisma.classSession.findMany();
+        }else if(userType=="User"){
+            return NextResponse.json({message:"Unauthorized", success: false}, {status: 401});
         }
-        console.log("Classes Fetched");
         return NextResponse.json({message: "Classes fetched", success: true, classes});
     } catch (error) {
         console.log(error.message);
