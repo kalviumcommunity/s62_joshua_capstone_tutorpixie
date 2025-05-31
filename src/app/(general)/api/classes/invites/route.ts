@@ -18,7 +18,7 @@ export async function GET() {
         }
 
         const userType = session.user.role as "User" | "Student" | "Tutor" | "Admin" | undefined;
-        const userId = session.user.id;
+        const userId = parseInt(session.user.id);
         const currentDate = new Date();
         
         console.log("User type:", userType);
@@ -42,7 +42,7 @@ export async function GET() {
             });
             console.log("Deleted sessions count:", deleteResult.count);
         } catch (deleteError) {
-            console.error("Error deleting completed sessions:", deleteError || "Unknown delete error");
+            console.error("Error deleting completed sessions:", deleteError);
             // Continue execution even if delete fails
         }
 
@@ -62,7 +62,7 @@ export async function GET() {
                         }
                     });
                 } catch (fetchError) {
-                    console.error("Error fetching student data:", fetchError || "Unknown error");
+                    console.error("Error fetching student data:", fetchError);
                     throw fetchError || new Error("Unknown database error occurred");
                 }
                 break;
@@ -81,7 +81,7 @@ export async function GET() {
                         }
                     });
                 } catch (fetchError) {
-                    console.error("Error fetching tutor data:", fetchError || "Unknown error");
+                    console.error("Error fetching tutor data:", fetchError);
                     throw fetchError || new Error("Unknown database error occurred");
                 }
                 break;
@@ -103,7 +103,7 @@ export async function GET() {
                     });
                 } catch (fetchError) {
                     console.error("Error fetching admin data:", fetchError);
-                    throw fetchError;
+                    throw fetchError || new Error("Unknown database error occurred");
                 }
                 break;
 
@@ -125,7 +125,7 @@ export async function GET() {
         console.error("Error message:", error?.message || "No error message");
         console.error("Error stack:", error?.stack || "No stack trace");
         console.error("Error type:", typeof error);
-        console.error("Full error object:", error || "Error is null/undefined");
+        console.error("Full error object:", error);
         
         return NextResponse.json(
             { 

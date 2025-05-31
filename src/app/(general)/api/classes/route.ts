@@ -13,6 +13,7 @@ export async function GET() {
             return NextResponse.json({message: "User not logged in", success: false});
         }
         const userType=session?.user?.role;
+        // const userType="Admin";
 
         if(userType == "Student"){
             classes = await prisma.classSession.findMany({where: {studentId: session?.user?.id}});

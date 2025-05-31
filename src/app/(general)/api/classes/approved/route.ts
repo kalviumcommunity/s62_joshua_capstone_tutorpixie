@@ -13,10 +13,10 @@ export async function GET() {
         }
 
         const userType = session.user.role as "User" | "Student" | "Tutor" | "Admin" | undefined;
-        const userId = session.user.id;
+        const userId = parseInt(session.user.id);
         const currentDate = new Date();
 
-        console.log(userType)
+        console.log(userType);
 
         let data: ClassSession[] = [];
 
@@ -27,8 +27,8 @@ export async function GET() {
                         studentId: userId,
                         studentApprov: true,
                         tutorApprov: true,
-                        endTime: {
-                            gte: currentDate
+                        startTime: {
+                            lte: currentDate
                         }
                     }
                 });
@@ -40,8 +40,8 @@ export async function GET() {
                         tutorId: userId,
                         studentApprov: true,
                         tutorApprov: true,
-                        endTime: {
-                            gte: currentDate
+                        startTime: {
+                            lte: currentDate
                         }
                     }
                 });
@@ -52,8 +52,8 @@ export async function GET() {
                     where: {
                         studentApprov: true,
                         tutorApprov: true,
-                        endTime: {
-                            gte: currentDate
+                        startTime: {
+                            lte: currentDate
                         }
                     }
                 });
@@ -63,12 +63,18 @@ export async function GET() {
             default:
                 return NextResponse.json({ message: "Unauthorized", success: false }, { status: 401 });
         }
-          
-          return NextResponse.json(
-            { message: "Classes fetched", success: true, data },
+
+        // Filter sessions that haven't ended yet (current time < startTime + duration)
+        const activeSessions = data.filter(session => {
+            const endTime = new Date(session.startTime.getTime() + (session.duration * 60 * 60 * 1000));
+            return currentDate < endTime;
+        });
+
+        return NextResponse.json(
+            { message: "Classes fetched", success: true, data: activeSessions },
             { status: 200 }
-          );
-          
+        );
+
     } catch (error: any) {
         console.error("Fetch error:", error);
         return NextResponse.json({ message: "Internal Server Error", success: false }, { status: 500 });
