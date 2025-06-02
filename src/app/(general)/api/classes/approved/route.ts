@@ -20,6 +20,14 @@ export async function GET() {
 
         let data: ClassSession[] = [];
 
+        // Move any sessions that are over to reviewing
+        await prisma.$executeRaw`
+            UPDATE "ClassSession"
+            SET status = 'Reviewing'
+            WHERE status = 'Confirmed'
+            AND (startTime + (duration || ' hours')::interval) < ${currentDate}
+        `;
+
         switch (userType) {
             case "Student":
                 data = await prisma.classSession.findMany({
@@ -27,9 +35,14 @@ export async function GET() {
                         studentId: userId,
                         studentApprov: true,
                         tutorApprov: true,
+                        status: "Confirmed",
+                        // Filter where current time is less than (startTime + duration in milliseconds)
                         startTime: {
-                            lte: currentDate
+                            gte: new Date(currentDate.getTime() - (24 * 60 * 60 * 1000)) // Allow sessions from last 24 hours to account for duration
                         }
+                    },
+                    orderBy: {
+                        startTime: 'asc'
                     }
                 });
                 break;
@@ -40,9 +53,13 @@ export async function GET() {
                         tutorId: userId,
                         studentApprov: true,
                         tutorApprov: true,
+                        status: "Confirmed",
                         startTime: {
-                            lte: currentDate
+                            gte: new Date(currentDate.getTime() - (24 * 60 * 60 * 1000))
                         }
+                    },
+                    orderBy: {
+                        startTime: 'asc'
                     }
                 });
                 break;
@@ -52,9 +69,13 @@ export async function GET() {
                     where: {
                         studentApprov: true,
                         tutorApprov: true,
+                        status: "Confirmed",
                         startTime: {
-                            lte: currentDate
+                            gte: new Date(currentDate.getTime() - (24 * 60 * 60 * 1000))
                         }
+                    },
+                    orderBy: {
+                        startTime: 'asc'
                     }
                 });
                 break;
@@ -66,12 +87,12 @@ export async function GET() {
 
         // Filter sessions that haven't ended yet (current time < startTime + duration)
         const activeSessions = data.filter(session => {
-            const endTime = new Date(session.startTime.getTime() + (session.duration * 60 * 60 * 1000));
+            const endTime = new Date(session.startTime.getTime() + ((session.duration + 0.1) * 60 * 60 * 1000));
             return currentDate < endTime;
         });
 
         return NextResponse.json(
-            { message: "Classes fetched", success: true, data: activeSessions },
+            { message: "Active classes fetched", success: true, data: activeSessions },
             { status: 200 }
         );
 
