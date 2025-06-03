@@ -120,6 +120,7 @@ model ClassSession {
   tutorId       Int
   studentId     Int
   startTime     DateTime
+  endTime       DateTime
   duration      Float
   meetlink      String?
   tutorApprov   Boolean  @default(false)
