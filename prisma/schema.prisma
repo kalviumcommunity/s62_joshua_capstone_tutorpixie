@@ -123,6 +123,7 @@ model ClassSession {
   endTime       DateTime
   duration      Float
   meetlink      String?
+  topic         String?
   tutorApprov   Boolean  @default(false)
   studentApprov Boolean  @default(false)
   repeating     Boolean  @default(false)
