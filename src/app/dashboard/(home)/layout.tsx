@@ -18,7 +18,7 @@ export default function HomeDashLayout({
         {statcard}
       </div>
       
-      <div className="flex flex-row justify-between gap-4 px-4 overflow-y-auto flex-grow">
+      <div className="flex flex-row justify-between gap-4 px-4 overflow-y-auto flex-1">
         <div className="flex-1">{sessionform}</div>
         <div className="flex-1">{upcomingclasses}</div>
         <div className="flex-1">{classinvitecard}</div>

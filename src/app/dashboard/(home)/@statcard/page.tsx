@@ -1,7 +1,7 @@
 import React from "react";
 
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl shadow-md p-4 flex-1 min-h-32 flex flex-col justify-around items-center">
+  <div className="bg-white rounded-2xl shadow-md p-1 flex-1 min-h-16 flex flex-col justify-around items-center">
     <h3 className="font-semibold text-2xl text-gray-900">{title}</h3>
     <div className="mt-1">{children}</div>
   </div>
@@ -9,7 +9,7 @@ const Card = ({ title, children }: { title: string; children: React.ReactNode })
 
 const Dashboard = () => {
   return (
-    <div className="bg-gray-900 p-6 rounded-2xl flex gap-8 justify-center items-stretch">
+    <div className="bg-gray-900 p-4 rounded-2xl flex gap-16 justify-center items-stretch">
       <Card title="Total Hours">
         <p className="text-3xl font-bold text-gray-900">59</p>
         <p className="text-sm text-gray-500 mt-1">Next: Tue, 4 PM</p>
