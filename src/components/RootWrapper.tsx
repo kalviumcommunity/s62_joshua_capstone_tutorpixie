@@ -1,11 +1,16 @@
 "use client"; 
 
 import { SessionProvider } from "next-auth/react";
+import QueryProvider from "./QueryProvider";
+
 
 export default function RootWrapper({ children }:{children: React.ReactNode}) {
+
   return (
     <SessionProvider>
-      {children}
+      <QueryProvider>
+        {children}
+      </QueryProvider>
     </SessionProvider>
   );
 }
