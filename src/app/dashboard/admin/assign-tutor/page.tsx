@@ -60,7 +60,6 @@ const TutorStudentSubjectsComponent: React.FC = () => {
     fetchRelations();
     fetchStudents();
     fetchTutors();
-    console.log(tutors);
   }, [])
 
 

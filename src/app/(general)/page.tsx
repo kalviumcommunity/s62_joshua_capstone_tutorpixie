@@ -1,7 +1,7 @@
-import TestimonialCard from "./TestimonialCard";
-import Hero from "./HomeHero";
-import OfferApproach from "./OfferApproach";
-import DemoSession from './DemoSession';
+import TestimonialCard from "../../components/home/TestimonialCard";
+import Hero from "../../components/home/HomeHero";
+import OfferApproach from "../../components/home/OfferApproach";
+import DemoSession from '../../components/home/DemoSession';
 
 export default async function Home() {
 
