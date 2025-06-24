@@ -28,14 +28,6 @@ const PayNow: React.FC<PayNowProps> = ({
   const { data: session } = useSession();
   const user = session?.user;
 
-  useEffect(() => {
-    if (!user) {
-      setError("User not found. Please log in to continue.");
-    } else {
-      setError("");
-    }
-  }, [user]);
-
   // Check if Razorpay script is already loaded on component mount
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Razorpay) {
@@ -90,8 +82,6 @@ const PayNow: React.FC<PayNowProps> = ({
         order_id: res.data.orderId,
         handler: async (response: any) => {
           try {
-            console.log("Payment Successful", response);
-            
             // Verify payment on backend
             const verifyRes = await axios.post('/api/invoices/verify-payment', {
               razorpay_order_id: response.razorpay_order_id,
@@ -118,7 +108,7 @@ const PayNow: React.FC<PayNowProps> = ({
           email: user?.email || '',
         },
         theme: {
-          color: "#3B82F6", // Changed to proper blue color
+          color: "#3B82F6",
         },
         modal: {
           ondismiss: () => {
