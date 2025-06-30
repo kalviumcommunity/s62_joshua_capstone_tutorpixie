@@ -83,7 +83,13 @@ const PayNow: React.FC<PayNowProps> = ({
         handler: async (response: any) => {
           try {
             // Verify payment on backend
-            const verifyRes = await axios.post('/api/invoices/verify-payment', {
+            console.log({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,  
+              razorpay_signature: response.razorpay_signature,
+              invoiceId: invoiceId
+            })
+            const verifyRes = await axios.post('/api/payments/verify', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,

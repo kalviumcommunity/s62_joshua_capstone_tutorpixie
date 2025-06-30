@@ -17,10 +17,10 @@ export default function CurrentInvoice() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [billingData, setBillingData] = useState<BillingData>({
-    totalAmount: 0,
+    totalAmount: 0.0,
     totalHours: 0.0,
     subjects: [],
-    currency: 'USD'
+    currency: 'USD',
   });
 
   // Fetch billing data on component mount
@@ -192,7 +192,7 @@ export default function CurrentInvoice() {
         {/* Stats Grid */}
         <div className="flex flex-wrap gap-4">
           {/* Total Amount */}
-          {billingData?.totalAmount &&
+          {billingData && 'totalAmount' in billingData && (
           <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
             <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
             <div className="text-xl font-bold text-blue-900 mb-1">
@@ -205,21 +205,20 @@ export default function CurrentInvoice() {
               {convertAmountToWords(billingData.totalAmount)}
             </div>
           </div>
-          }
+          )}
 
           {/* Total Hours */}
-          {
-            billingData?.totalHours &&
+          {billingData && 'totalHours' in billingData && (
           <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
             <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
             <div className="text-xl font-bold text-green-900">
               {billingData.totalHours}
             </div>
-          </div>}
+          </div>
+          )}
 
           {/* Subjects */}
-          {
-            billingData?.subjects &&
+          {billingData && 'subjects' in billingData && (
             <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
             <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
             <div className="text-xl font-bold text-purple-900">
@@ -240,10 +239,10 @@ export default function CurrentInvoice() {
               )}
             </div>
             </div>
-          }
+          )}
 
           {/* Tutor Payout */}
-          {billingData?.tutorPayout && (
+          {billingData && 'tutorPayout' in billingData && billingData.tutorPayout !== undefined && (
             <div className="bg-amber-50 flex-1 rounded-lg p-4 border border-amber-100">
               <div className="text-sm font-medium text-amber-600 mb-1">Tutor Payout</div>
               <div className="text-xl font-bold text-amber-700">
