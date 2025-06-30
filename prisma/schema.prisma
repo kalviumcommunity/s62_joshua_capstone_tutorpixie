@@ -50,7 +50,7 @@ model user {
   parentEmail          String?
   grade                String?
   perHr                Int?
-  billingCurrency      String?
+  billingCurrency      currency?
 
   // NextAuth Relations
   tutorToStudents TutorStudent[] @relation("TutorToStudents")
@@ -59,6 +59,8 @@ model user {
   studentSessions ClassSession[] @relation("StudentSessions")
   accounts        Account[]
   sessions        Session[]
+  TutorInvoices   Invoices[]     @relation("TutorInvoices")
+  StudentInvoices Invoices[]     @relation("StudentInvoices")
 }
 
 //Account and Session are required for 
@@ -106,6 +108,7 @@ model TutorStudent {
 enum status {
   Pending
   Confirmed
+  Reviewing
   Cancelled
   Ongoing
   Completed
@@ -118,16 +121,38 @@ model ClassSession {
   studentId     Int
   startTime     DateTime
   endTime       DateTime
+  duration      Float
   meetlink      String?
+  topic         String?
   tutorApprov   Boolean  @default(false)
   studentApprov Boolean  @default(false)
   repeating     Boolean  @default(false)
-  repeatingDays Int[]    @default([])
+  repeatingDay  Int?
   status        status   @default(Pending)
 
   tutor   user @relation("TutorSessions", fields: [tutorId], references: [id])
   student user @relation("StudentSessions", fields: [studentId], references: [id])
+}
 
-  @@unique([tutorId, startTime, endTime])
-  @@unique([studentId, startTime, endTime])
+enum invoiceStatus {
+  paid
+  active
+}
+
+enum currency {
+  USD
+  AUD
+  INR
+}
+
+model Invoices {
+  id        String        @id @default(uuid())
+  tutorId   Int?
+  studentId Int?
+  status    invoiceStatus @default(active)
+  amt       Int
+  currency  currency      @default(INR)
+
+  tutor   user? @relation("TutorInvoices", fields: [tutorId], references: [id])
+  student user? @relation("StudentInvoices", fields: [studentId], references: [id])
 }

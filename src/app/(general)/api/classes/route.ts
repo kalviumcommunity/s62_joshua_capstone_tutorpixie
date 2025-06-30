@@ -12,13 +12,18 @@ export async function GET() {
         if(!session?.user){
             return NextResponse.json({message: "User not logged in", success: false});
         }
+        const userType=session?.user?.role;
+        // const userType="Admin";
 
-        if(session?.user?.role == "Student"){
+        if(userType == "Student"){
             classes = await prisma.classSession.findMany({where: {studentId: session?.user?.id}});
-        }else{
+        }else if(userType=="Tutor"){
             classes = await prisma.classSession.findMany({where: {tutorId: session?.user?.id}});
+        }else if(userType=="Admin"){
+            classes = await prisma.classSession.findMany();
+        }else if(userType=="User"){
+            return NextResponse.json({message:"Unauthorized", success: false}, {status: 401});
         }
-        console.log("Classes Fetched");
         return NextResponse.json({message: "Classes fetched", success: true, classes});
     } catch (error) {
         console.log(error.message);
@@ -30,10 +35,20 @@ export async function GET() {
 export async function POST(req: Request){
     try {
         const body = await req.json();
-        const {subject, tutorId, studentId, startTime, endTime} = body;
+        const {
+            subject, 
+            tutorId, 
+            studentId, 
+            startTime, 
+            duration, 
+            meetlink, 
+            repeating, 
+            repeatingDay, 
+            status
+        } = body;
         
         // Validate required fields
-        if(!subject || !tutorId || !studentId || !startTime || !endTime){
+        if(!subject || !tutorId || !studentId || !startTime || !duration){
             return NextResponse.json({
                 message: "Enter all necessary fields", 
                 success: false
@@ -42,7 +57,6 @@ export async function POST(req: Request){
         
         // Convert string dates to Date objects if they're not already
         const parsedStartTime = new Date(startTime);
-        const parsedEndTime = new Date(endTime);
         
         // Validate the users exist with correct roles
         const tutorExists = await prisma.user.findUnique({
@@ -67,15 +81,18 @@ export async function POST(req: Request){
             }, {status: 401});
         }
         
-        // Create the class session
+        // Create the class session with explicit field mapping
         const newClass = await prisma.classSession.create({
             data: {
-                ...body,
                 subject,
                 tutorId,
                 studentId,
+                duration,
                 startTime: parsedStartTime,
-                endTime: parsedEndTime
+                meetlink: meetlink || null,
+                repeating: repeating || false,
+                repeatingDay: repeatingDay || null,
+                status: status || "Pending"
             }
         });
         
@@ -99,5 +116,15 @@ export async function POST(req: Request){
             message: "Internal server error in creating classes", 
             success: false
         }, {status: 500});
+    }
+}
+
+export async function DELETE(req: Request){
+    try {
+        await prisma.classSession.deleteMany({});
+        return NextResponse.json({message:"deleted"})
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({message: "unable to delete"}, {status: 500})
     }
 }

@@ -9,7 +9,8 @@ import {
   LogOut,
   ArrowRightLeft,
   UserPlus,
-  HomeIcon
+  HomeIcon,
+  Calendar
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
@@ -46,17 +47,23 @@ const Sidebar: React.FC<SidebarProps> = () => {
           label: 'Assign Tutors',
           icon: ArrowRightLeft
         },
-        {
+        // {
 
-          href: '/dashboard/admin/billing', 
-          label: 'Billing', 
-          icon: DollarSign 
-        },
+        //   href: '/dashboard/admin/billing', 
+        //   label: 'Billing', 
+        //   icon: DollarSign 
+        // },
         {
 
           href: '/dashboard/admin/add-user', 
           label: 'Add Users', 
           icon: UserPlus 
+        },
+        {
+
+          href: '/dashboard/admin/sessions', 
+          label: 'Sessions', 
+          icon: Calendar 
         }
       ]
     }else{
