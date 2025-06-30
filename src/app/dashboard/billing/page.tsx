@@ -1,5 +1,6 @@
 "use client";
 import CurrentInvoice from "@/components/billing/CurrentInvoice";
+import InvoicesTab from "@/components/billing/InvoicesTab";
 import ClassesTab from "@/components/ClassesTab";
 import { LoadingComponent } from "@/components/LoadingComponent";
 import { useQuery } from "@tanstack/react-query";
@@ -19,12 +20,30 @@ const fetchUnbilledSession = async () =>{
     }
 }
 
+const fetchPastInvoices = async () => {
+    try {
+        const res = await axios.get("/api/invoices/past");
+        if(!res || !res?.data?.success || !res?.data?.data){
+            throw new Error("Error in fetching past invoices");
+        }
+        return res.data.data;
+    } catch (error) {
+        console.log(error);
+        throw new Error("Error in fetching past invoices");
+    }
+} 
+
 export default function Billing(){
 
     const {data, isLoading, isError, error} = useQuery({
         queryFn: fetchUnbilledSession,
         queryKey: ['class-invoice']
     })
+
+    const {data: pastInvoices, isLoading: isPastLoading, isError: isPastError, error: pastError} = useQuery({
+        queryFn: fetchPastInvoices,
+        queryKey: ['past-invoices']
+    });
     
 
 return (
@@ -47,7 +66,11 @@ return (
       {/* Past Invoices Column */}
       <div className="w-full h-full px-4 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-auto">
-          <ClassesTab name="Past invoices" />
+          {
+            !isPastLoading
+              ? <InvoicesTab name="Past invoices" apiData={pastInvoices} />
+              : <LoadingComponent title="Past invoices" />
+          }
         </div>
       </div>
 
