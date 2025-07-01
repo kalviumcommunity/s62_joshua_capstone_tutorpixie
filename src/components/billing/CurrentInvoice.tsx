@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import PayNow from './PayNow';
 import axios from 'axios';
+import { useSession } from 'next-auth/react';
 
 export interface BillingData {
   totalAmount: number;
@@ -14,6 +15,7 @@ export interface BillingData {
 }
 
 export default function CurrentInvoice() {
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [billingData, setBillingData] = useState<BillingData>({
@@ -32,9 +34,9 @@ export default function CurrentInvoice() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await axios.get('/api/invoices/current');
-      
+
       if (!result || !result.data || !result.data.success) {
         throw new Error(result?.data?.message || 'Failed to fetch billing data');
       }
@@ -71,12 +73,12 @@ export default function CurrentInvoice() {
 
     const convertHundreds = (num: number): string => {
       let result = '';
-      
+
       if (num >= 100) {
         result += ones[Math.floor(num / 100)] + ' hundred ';
         num %= 100;
       }
-      
+
       if (num >= 20) {
         result += tens[Math.floor(num / 10)] + ' ';
         num %= 10;
@@ -84,18 +86,18 @@ export default function CurrentInvoice() {
         result += teens[num - 10] + ' ';
         num = 0;
       }
-      
+
       if (num > 0) {
         result += ones[num] + ' ';
       }
-      
+
       return result.trim();
     };
 
     const parts = [];
     let dollarsAmount = Math.floor(amount);
     let centsAmount = Math.round((amount - dollarsAmount) * 100);
-    
+
     if (dollarsAmount === 0) {
       parts.push('zero');
     } else {
@@ -110,11 +112,11 @@ export default function CurrentInvoice() {
         groupIndex++;
       }
     }
-    
+
     if (centsAmount > 0) {
       parts.push('and ' + convertHundreds(centsAmount));
     }
-    
+
     return parts.join(' ').replace(/\s+/g, ' ').trim();
   };
 
@@ -193,51 +195,51 @@ export default function CurrentInvoice() {
         <div className="flex flex-wrap gap-4">
           {/* Total Amount */}
           {billingData && 'totalAmount' in billingData && (
-          <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
-            <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
-            <div className="text-xl font-bold text-blue-900 mb-1">
-              {getCurrencySymbol(billingData.currency)}{billingData.totalAmount.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}
+            <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
+              <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
+              <div className="text-xl font-bold text-blue-900 mb-1">
+                {getCurrencySymbol(billingData.currency)}{billingData.totalAmount.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </div>
+              <div className="text-xs text-blue-700 capitalize">
+                {convertAmountToWords(billingData.totalAmount)}
+              </div>
             </div>
-            <div className="text-xs text-blue-700 capitalize">
-              {convertAmountToWords(billingData.totalAmount)}
-            </div>
-          </div>
           )}
 
           {/* Total Hours */}
           {billingData && 'totalHours' in billingData && (
-          <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
-            <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
-            <div className="text-xl font-bold text-green-900">
-              {billingData.totalHours}
+            <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
+              <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
+              <div className="text-xl font-bold text-green-900">
+                {billingData.totalHours}
+              </div>
             </div>
-          </div>
           )}
 
           {/* Subjects */}
           {billingData && 'subjects' in billingData && (
             <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
-            <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
-            <div className="text-xl font-bold text-purple-900">
-              {billingData.subjects.length}
-            </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {billingData.subjects.length > 0 ? (
-                billingData.subjects.map((subject, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
-                  >
-                    {subject}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-purple-600">No subjects</span>
-              )}
-            </div>
+              <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
+              <div className="text-xl font-bold text-purple-900">
+                {billingData.subjects.length}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {billingData.subjects.length > 0 ? (
+                  billingData.subjects.map((subject, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+                    >
+                      {subject}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-purple-600">No subjects</span>
+                )}
+              </div>
             </div>
           )}
 
@@ -256,13 +258,16 @@ export default function CurrentInvoice() {
         </div>
 
         {/* Pay Now Button */}
-        <div className="flex justify-start items-center">
-          <PayNow 
-            invoiceId={billingData.invoiceId || undefined}
-            amount={billingData.totalAmount} 
-            currency={billingData.currency || 'INR'} 
-          />
-        </div>
+        {
+          session?.user?.role === 'Student' &&
+          <div className="flex justify-start items-center">
+            <PayNow
+              invoiceId={billingData.invoiceId || undefined}
+              amount={billingData.totalAmount}
+              currency={billingData.currency || 'INR'}
+            />
+          </div>
+        }
       </div>
     </div>
   );
