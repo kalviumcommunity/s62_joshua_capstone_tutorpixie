@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import PayNow from './PayNow';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
@@ -14,45 +14,46 @@ export interface BillingData {
   tutorPayout?: number;
 }
 
+interface BillingResponse {
+  success: boolean;
+  data: BillingData;
+  message?: string;
+}
+
+// API function for fetching billing data
+const fetchBillingData = async (): Promise<BillingData> => {
+  const result = await axios.get<BillingResponse>('/api/invoices/current');
+  
+  if (!result || !result.data || !result.data.success) {
+    throw new Error(result?.data?.message || 'Failed to fetch billing data');
+  }
+
+  if (!result.data.data) {
+    throw new Error('Invalid response format - no data received');
+  }
+
+  return result.data.data;
+};
+
 export default function CurrentInvoice() {
   const { data: session } = useSession();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [billingData, setBillingData] = useState<BillingData>({
-    totalAmount: 0.0,
-    totalHours: 0.0,
-    subjects: [],
-    currency: 'USD',
-  });
 
-  // Fetch billing data on component mount
-  useEffect(() => {
-    fetchBillingData();
-  }, []);
-
-  const fetchBillingData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const result = await axios.get('/api/invoices/current');
-
-      if (!result || !result.data || !result.data.success) {
-        throw new Error(result?.data?.message || 'Failed to fetch billing data');
-      }
-
-      if (result.data.success && result.data.data) {
-        setBillingData(result.data.data);
-      } else {
-        throw new Error(result.message || 'Invalid response format');
-      }
-    } catch (err) {
+  // React Query hook for fetching billing data
+  const {
+    data: billingData,
+    isLoading,
+    error,
+    refetch,
+    isError
+  } = useQuery({
+    queryKey: ['currentInvoice'],
+    queryFn: fetchBillingData,
+    retry: 2, // Retry failed requests twice
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    onError: (err) => {
       console.error('Error fetching billing data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load billing data');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   const getCurrencySymbol = (currency: string = 'USD'): string => {
     const symbols: Record<string, string> = {
@@ -131,6 +132,7 @@ export default function CurrentInvoice() {
     });
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
@@ -152,7 +154,10 @@ export default function CurrentInvoice() {
     );
   }
 
-  if (error) {
+  // Error state
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load billing data';
+    
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -166,11 +171,11 @@ export default function CurrentInvoice() {
               </svg>
               <div>
                 <h3 className="text-sm font-medium text-red-800">Error Loading Billing Data</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
               </div>
             </div>
             <button
-              onClick={fetchBillingData}
+              onClick={() => refetch()}
               className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
             >
               Retry
@@ -181,6 +186,7 @@ export default function CurrentInvoice() {
     );
   }
 
+  // Success state - billingData is guaranteed to exist here
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
       {/* Header */}
@@ -194,57 +200,51 @@ export default function CurrentInvoice() {
         {/* Stats Grid */}
         <div className="flex flex-wrap gap-4">
           {/* Total Amount */}
-          {billingData && 'totalAmount' in billingData && (
-            <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
-              <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
-              <div className="text-xl font-bold text-blue-900 mb-1">
-                {getCurrencySymbol(billingData.currency)}{billingData.totalAmount.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </div>
-              <div className="text-xs text-blue-700 capitalize">
-                {convertAmountToWords(billingData.totalAmount)}
-              </div>
+          <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
+            <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
+            <div className="text-xl font-bold text-blue-900 mb-1">
+              {getCurrencySymbol(billingData.currency)}{billingData.totalAmount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}
             </div>
-          )}
+            <div className="text-xs text-blue-700 capitalize">
+              {convertAmountToWords(billingData.totalAmount)}
+            </div>
+          </div>
 
           {/* Total Hours */}
-          {billingData && 'totalHours' in billingData && (
-            <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
-              <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
-              <div className="text-xl font-bold text-green-900">
-                {billingData.totalHours}
-              </div>
+          <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
+            <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
+            <div className="text-xl font-bold text-green-900">
+              {billingData.totalHours}
             </div>
-          )}
+          </div>
 
           {/* Subjects */}
-          {billingData && 'subjects' in billingData && (
-            <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
-              <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
-              <div className="text-xl font-bold text-purple-900">
-                {billingData.subjects.length}
-              </div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {billingData.subjects.length > 0 ? (
-                  billingData.subjects.map((subject, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
-                    >
-                      {subject}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-purple-600">No subjects</span>
-                )}
-              </div>
+          <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
+            <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
+            <div className="text-xl font-bold text-purple-900">
+              {billingData.subjects.length}
             </div>
-          )}
+            <div className="flex flex-wrap gap-1 mt-2">
+              {billingData.subjects.length > 0 ? (
+                billingData.subjects.map((subject, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+                  >
+                    {subject}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-purple-600">No subjects</span>
+              )}
+            </div>
+          </div>
 
           {/* Tutor Payout */}
-          {billingData && 'tutorPayout' in billingData && billingData.tutorPayout !== undefined && (
+          {billingData.tutorPayout !== undefined && (
             <div className="bg-amber-50 flex-1 rounded-lg p-4 border border-amber-100">
               <div className="text-sm font-medium text-amber-600 mb-1">Tutor Payout</div>
               <div className="text-xl font-bold text-amber-700">
@@ -258,8 +258,7 @@ export default function CurrentInvoice() {
         </div>
 
         {/* Pay Now Button */}
-        {
-          session?.user?.role === 'Student' &&
+        {session?.user?.role === 'Student' && (
           <div className="flex justify-start items-center">
             <PayNow
               invoiceId={billingData.invoiceId || undefined}
@@ -267,7 +266,7 @@ export default function CurrentInvoice() {
               currency={billingData.currency || 'INR'}
             />
           </div>
-        }
+        )}
       </div>
     </div>
   );
