@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import PayNow from './PayNow';
 import axios from 'axios';
+import { useSession } from 'next-auth/react';
 
 export interface BillingData {
   totalAmount: number;
@@ -13,44 +14,46 @@ export interface BillingData {
   tutorPayout?: number;
 }
 
+interface BillingResponse {
+  success: boolean;
+  data: BillingData;
+  message?: string;
+}
+
+// API function for fetching billing data
+const fetchBillingData = async (): Promise<BillingData> => {
+  const result = await axios.get<BillingResponse>('/api/invoices/current');
+  
+  if (!result || !result.data || !result.data.success) {
+    throw new Error(result?.data?.message || 'Failed to fetch billing data');
+  }
+
+  if (!result.data.data) {
+    throw new Error('Invalid response format - no data received');
+  }
+
+  return result.data.data;
+};
+
 export default function CurrentInvoice() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [billingData, setBillingData] = useState<BillingData>({
-    totalAmount: 0.0,
-    totalHours: 0.0,
-    subjects: [],
-    currency: 'USD',
-  });
+  const { data: session } = useSession();
 
-  // Fetch billing data on component mount
-  useEffect(() => {
-    fetchBillingData();
-  }, []);
-
-  const fetchBillingData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const result = await axios.get('/api/invoices/current');
-      
-      if (!result || !result.data || !result.data.success) {
-        throw new Error(result?.data?.message || 'Failed to fetch billing data');
-      }
-
-      if (result.data.success && result.data.data) {
-        setBillingData(result.data.data);
-      } else {
-        throw new Error(result.message || 'Invalid response format');
-      }
-    } catch (err) {
+  // React Query hook for fetching billing data
+  const {
+    data: billingData,
+    isLoading,
+    error,
+    refetch,
+    isError
+  } = useQuery({
+    queryKey: ['currentInvoice'],
+    queryFn: fetchBillingData,
+    retry: 2, // Retry failed requests twice
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    onError: (err) => {
       console.error('Error fetching billing data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load billing data');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  });
 
   const getCurrencySymbol = (currency: string = 'USD'): string => {
     const symbols: Record<string, string> = {
@@ -71,12 +74,12 @@ export default function CurrentInvoice() {
 
     const convertHundreds = (num: number): string => {
       let result = '';
-      
+
       if (num >= 100) {
         result += ones[Math.floor(num / 100)] + ' hundred ';
         num %= 100;
       }
-      
+
       if (num >= 20) {
         result += tens[Math.floor(num / 10)] + ' ';
         num %= 10;
@@ -84,18 +87,18 @@ export default function CurrentInvoice() {
         result += teens[num - 10] + ' ';
         num = 0;
       }
-      
+
       if (num > 0) {
         result += ones[num] + ' ';
       }
-      
+
       return result.trim();
     };
 
     const parts = [];
     let dollarsAmount = Math.floor(amount);
     let centsAmount = Math.round((amount - dollarsAmount) * 100);
-    
+
     if (dollarsAmount === 0) {
       parts.push('zero');
     } else {
@@ -110,11 +113,11 @@ export default function CurrentInvoice() {
         groupIndex++;
       }
     }
-    
+
     if (centsAmount > 0) {
       parts.push('and ' + convertHundreds(centsAmount));
     }
-    
+
     return parts.join(' ').replace(/\s+/g, ' ').trim();
   };
 
@@ -129,6 +132,7 @@ export default function CurrentInvoice() {
     });
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
@@ -150,7 +154,10 @@ export default function CurrentInvoice() {
     );
   }
 
-  if (error) {
+  // Error state
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load billing data';
+    
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -164,11 +171,11 @@ export default function CurrentInvoice() {
               </svg>
               <div>
                 <h3 className="text-sm font-medium text-red-800">Error Loading Billing Data</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
               </div>
             </div>
             <button
-              onClick={fetchBillingData}
+              onClick={() => refetch()}
               className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
             >
               Retry
@@ -179,6 +186,7 @@ export default function CurrentInvoice() {
     );
   }
 
+  // Success state - billingData is guaranteed to exist here
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-8">
       {/* Header */}
@@ -192,7 +200,6 @@ export default function CurrentInvoice() {
         {/* Stats Grid */}
         <div className="flex flex-wrap gap-4">
           {/* Total Amount */}
-          {billingData && 'totalAmount' in billingData && (
           <div className="bg-blue-50 flex-1 rounded-lg p-4 border border-blue-100">
             <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
             <div className="text-xl font-bold text-blue-900 mb-1">
@@ -205,21 +212,17 @@ export default function CurrentInvoice() {
               {convertAmountToWords(billingData.totalAmount)}
             </div>
           </div>
-          )}
 
           {/* Total Hours */}
-          {billingData && 'totalHours' in billingData && (
           <div className="bg-green-50 flex-1 rounded-lg p-4 border border-green-100">
             <div className="text-sm font-medium text-green-600 mb-1">Total Hours</div>
             <div className="text-xl font-bold text-green-900">
               {billingData.totalHours}
             </div>
           </div>
-          )}
 
           {/* Subjects */}
-          {billingData && 'subjects' in billingData && (
-            <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
+          <div className="bg-purple-50 flex-1 rounded-lg p-4 border border-purple-100">
             <div className="text-sm font-medium text-purple-600 mb-1">Subjects</div>
             <div className="text-xl font-bold text-purple-900">
               {billingData.subjects.length}
@@ -238,11 +241,10 @@ export default function CurrentInvoice() {
                 <span className="text-xs text-purple-600">No subjects</span>
               )}
             </div>
-            </div>
-          )}
+          </div>
 
           {/* Tutor Payout */}
-          {billingData && 'tutorPayout' in billingData && billingData.tutorPayout !== undefined && (
+          {billingData.tutorPayout !== undefined && (
             <div className="bg-amber-50 flex-1 rounded-lg p-4 border border-amber-100">
               <div className="text-sm font-medium text-amber-600 mb-1">Tutor Payout</div>
               <div className="text-xl font-bold text-amber-700">
@@ -256,13 +258,15 @@ export default function CurrentInvoice() {
         </div>
 
         {/* Pay Now Button */}
-        <div className="flex justify-start items-center">
-          <PayNow 
-            invoiceId={billingData.invoiceId || undefined}
-            amount={billingData.totalAmount} 
-            currency={billingData.currency || 'INR'} 
-          />
-        </div>
+        {session?.user?.role === 'Student' && (
+          <div className="flex justify-start items-center">
+            <PayNow
+              invoiceId={billingData.invoiceId || undefined}
+              amount={billingData.totalAmount}
+              currency={billingData.currency || 'INR'}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
