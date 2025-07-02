@@ -7,6 +7,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import { supportedTimezones } from "@/lib/timezone";
+import { supportedCurrencies } from "@/lib/currency";
 
 const EditUserForm = ({ onUserUpdate = () => {} }) => {
     const [subjectInput, setSubjectInput] = useState("");
@@ -26,7 +28,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
         country: "",
         city: "",
         address: "",
-        userStatus: "Active",
+        // userStatus: "Active",
         grades: "",
         highestQualification: "",
         perHr: null,
@@ -35,9 +37,10 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
         parentPhone: "",
         parentEmail: "",
         grade: "",
+        timezone: "IST"
     });
 
-    const userStatusOptions = ["Active", "Discontinued", "Paused"];
+    // const userStatusOptions = ["Active", "Discontinued", "Paused"];
 
     useEffect(() => {
         async function fetchUser() {
@@ -58,7 +61,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                         country: userData.country || "",
                         city: userData.city || "",
                         address: userData.address || "",
-                        userStatus: userData.userStatus || "Active",
+                        // userStatus: userData.userStatus || "Active",
                         grades: userData.grades || "",
                         highestQualification: userData.highestQualification || "",
                         perHr: userData.perHr || null,
@@ -67,6 +70,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                         parentPhone: userData.parentPhone || "",
                         parentEmail: userData.parentEmail || "",
                         grade: userData.grade || "",
+                        timezone: userData.timezone || 'IST',
                     });
                     setUserSubjects(userData.subjects || []);
                 }
@@ -251,11 +255,43 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                                         placeholder="123 Main Street"
                                     />
                                 </div>
+                                {/* add two more fields, dropdowns, currencies and timezones */}
+                                <div className="space-y-4">
+                                    <Label htmlFor="timezone" className="text-sm font-medium text-gray-700">Timezone</Label>
+                                    <select
+                                        id="timezone"
+                                        name="timezone"
+                                        value={formData.timezone}
+                                        onChange={handleChange}
+                                        className="border-gray-200 focus:border-gray-400 focus:ring-0 w-full p-2 rounded-md"
+                                    >
+                                        <option value="" disabled>Select Time Zone</option>
+                                        {supportedTimezones.map(tz => (
+                                            <option key={tz} value={tz}>{tz}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* <div className="space-y-4">
+                                    <Label htmlFor="currency" className="text-sm font-medium text-gray-700">Currency</Label>
+                                    <select
+                                        id="currency"
+                                        name="currency"
+                                        value={formData.currency}
+                                        onChange={handleChange}
+                                        className="border-gray-200 focus:border-gray-400 focus:ring-0 w-full p-2 rounded-md"
+                                    >
+                                        <option value="" disabled>Select Currency</option>
+                                        {supportedCurrencies.map(currency => (
+                                            <option key={currency} value={currency}>{currency}</option>
+                                        ))}
+                                    </select>
+                                </div> */}
                             </div>
                         </div>
 
                         {/* Status */}
-                        <div className="space-y-4">
+                        {/* <div className="space-y-4">
                             <Label className="text-sm font-medium text-gray-700">Account Status</Label>
                             <RadioGroup
                                 value={formData.userStatus}
@@ -271,10 +307,10 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                                     </div>
                                 ))}
                             </RadioGroup>
-                        </div>
+                        </div> */}
 
                         {/* Subjects */}
-                        <div className="space-y-4">
+                        {/* <div className="space-y-4">
                             <Label htmlFor="subjects" className="text-sm font-medium text-gray-700">Subjects</Label>
                             <div className="flex gap-3">
                                 <Input
@@ -312,10 +348,11 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </div> */}
+
 
                         {/* Tutor-specific fields */}
-                        {userType === "tutor" && (
+                        {userType === "Tutor" && (
                             <div className="space-y-6">
                                 <h2 className="text-lg font-medium text-gray-900 pb-2 border-b border-gray-100">
                                     Tutor Information
@@ -371,7 +408,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                         )}
 
                         {/* Student-specific fields */}
-                        {userType === "student" && (
+                        {userType === "Student" && (
                             <div className="space-y-6">
                                 <h2 className="text-lg font-medium text-gray-900 pb-2 border-b border-gray-100">
                                     Student Information
@@ -396,7 +433,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                                             value={formData.parentPhone} 
                                             onChange={handleChange}
                                             className="border-gray-200 focus:border-gray-400 focus:ring-0"
-                                            placeholder="Phone(with country code)"
+                                            placeholder="+91 1234567890 (with country code)"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -407,6 +444,7 @@ const EditUserForm = ({ onUserUpdate = () => {} }) => {
                                             value={formData.parentEmail} 
                                             onChange={handleChange}
                                             className="border-gray-200 focus:border-gray-400 focus:ring-0"
+                                            placeholder="parent@example.com"
                                         />
                                     </div>
                                     <div className="space-y-2">
