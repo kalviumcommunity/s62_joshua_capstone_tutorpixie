@@ -1,230 +1,135 @@
 import { DateTime } from 'luxon';
 
-export const TIMEZONE_IANA: Record<string, string> = {
-  IST: 'Asia/Kolkata',
-  PST: 'America/Los_Angeles',
-  EST: 'America/New_York',
-  GMT: 'Etc/GMT',
-  UTC: 'Etc/UTC',
-  CST: 'America/Chicago',
+export const COMMON_TIMEZONES = {
+  EASTERN: 'America/New_York',
+  CENTRAL: 'America/Chicago',
+  MOUNTAIN: 'America/Denver',
+  PACIFIC: 'America/Los_Angeles',
+  ALASKA: 'America/Anchorage',
+  HAWAII: 'Pacific/Honolulu',
+  LONDON: 'Europe/London',
+  PARIS: 'Europe/Paris',
+  BERLIN: 'Europe/Berlin',
+  ROME: 'Europe/Rome',
+  MADRID: 'Europe/Madrid',
+  STOCKHOLM: 'Europe/Stockholm',
+  MOSCOW: 'Europe/Moscow',
+  TOKYO: 'Asia/Tokyo',
+  SHANGHAI: 'Asia/Shanghai',
+  HONG_KONG: 'Asia/Hong_Kong',
+  SINGAPORE: 'Asia/Singapore',
+  MUMBAI: 'Asia/Kolkata',
+  DUBAI: 'Asia/Dubai',
+  SYDNEY: 'Australia/Sydney',
+  MELBOURNE: 'Australia/Melbourne',
+  PERTH: 'Australia/Perth',
+  UTC: 'UTC',
 };
 
-// Fallback offsets for when IANA zones might not work
-const TIMEZONE_OFFSETS: Record<string, number> = {
-  IST: 5.5,  // UTC+5:30
-  PST: -8,   // UTC-8 (standard time)
-  EST: -5,   // UTC-5 (standard time)
-  GMT: 0,    // UTC+0
-  UTC: 0,    // UTC+0
-  CST: -6,   // UTC-6 (standard time)
-};
+export const supportedTimezones: string[] = Object.values(COMMON_TIMEZONES);
 
 /**
- * Get IANA timezone name, fallback to original.
+ * Convert local time to UTC
+ * @param localTime - Time in local timezone (string, DateTime, or Date)
+ * @param localTimeZone - IANA timezone identifier (e.g., 'Australia/Melbourne')
+ * @returns Date object representing the equivalent UTC time
  */
-export const getIanaTimeZone = (tz: string): string =>
-  TIMEZONE_IANA[tz.toUpperCase()] || tz;
+export const convertToUTC = (localDateTime: string, timezone: string): Date => {
+  // Parse with explicit input timezone
+  const dt = DateTime.fromISO(localDateTime, { zone: timezone });
 
-export const supportedTimezones = Object.keys(TIMEZONE_IANA);
+  console.log("Input DateTime (with TZ):", dt.toString());
 
-/**
- * Convert UTC datetime to local timezone.
- */
-export const convertFromUTC = (
-  utcDateTime: string | Date,
-  timeZone: string
-): string => {
-  const ianaTimezone = getIanaTimeZone(timeZone);
-  
-  // Parse the UTC datetime
-  const utcDate = typeof utcDateTime === 'string' 
-    ? DateTime.fromISO(utcDateTime, { zone: 'utc' })
-    : DateTime.fromJSDate(utcDateTime, { zone: 'utc' });
-  
-  if (!utcDate.isValid) {
-    throw new Error(`Invalid UTC datetime: ${utcDateTime}`);
-  }
-  
-  // Try using IANA timezone first
-  const localDate = utcDate.setZone(ianaTimezone);
-  
-  // Check if the conversion worked by comparing timezone offsets
-  if (localDate.isValid) {
-    // For IST specifically, verify the offset is correct (+5:30 = 330 minutes)
-    if (timeZone.toUpperCase() === 'IST') {
-      const offsetMinutes = localDate.offset;
-      if (offsetMinutes === 330) { // 5.5 hours * 60 minutes
-        return localDate.toFormat('yyyy-MM-dd\'T\'HH:mm:ss');
-      }
-    } else {
-      return localDate.toFormat('yyyy-MM-dd\'T\'HH:mm:ss');
-    }
-  }
-  
-  // Fallback: use manual offset calculation
-  const offset = TIMEZONE_OFFSETS[timeZone.toUpperCase()];
-  if (offset !== undefined) {
-    const offsetDate = utcDate.plus({ hours: offset });
-    return offsetDate.toFormat('yyyy-MM-dd\'T\'HH:mm:ss');
-  }
-  
-  throw new Error(`Unsupported timezone: ${timeZone}`);
+  // Convert to UTC and return JS Date
+  const dtUtc = dt.toUTC();
+
+  console.log("Converted to UTC:", dtUtc.toString());
+
+  return dtUtc.toJSDate();
 };
 
 /**
- * Convert local datetime string in given timezone to UTC Date.
+ * Convert UTC time to local time
+ * @param utcTime - UTC time (string, DateTime, or Date)
+ * @param targetTimeZone - IANA timezone identifier (e.g., 'Australia/Melbourne')
+ * @returns Date object representing the equivalent local time (NOTE: JS Date is always UTC internally)
  */
-export const convertToUTC = (
-  dateTimeString: string,
-  timeZone: string
-): Date => {
-  const ianaTimezone = getIanaTimeZone(timeZone);
-  
-  // Try using IANA timezone first
-  const localDateTime = DateTime.fromISO(dateTimeString, { zone: ianaTimezone });
-  
-  if (!localDateTime.isValid) {
-    throw new Error(`Invalid datetime: ${dateTimeString}`);
-  }
-  
-  // For IST specifically, verify the offset is correct
-  if (timeZone.toUpperCase() === 'IST') {
-    const offsetMinutes = localDateTime.offset;
-    if (offsetMinutes !== 330) { // 5.5 hours * 60 minutes
-      // Fallback: treat as UTC and subtract IST offset
-      const utcDateTime = DateTime.fromISO(dateTimeString, { zone: 'utc' });
-      const adjustedDateTime = utcDateTime.minus({ hours: 5.5 });
-      return adjustedDateTime.toJSDate();
-    }
-  }
-  
-  // Convert to UTC and return as Date object
-  return localDateTime.toUTC().toJSDate();
-};
+export function convertFromUTC(utcTime: string, targetTimeZone: string): string {
+  const localDateTime = DateTime.fromISO(utcTime, { zone: 'utc' }).setZone(targetTimeZone)
+  // return localDateTime.toFormat("yyyy-MM-dd'T'HH:mm:ss");
+  return localDateTime.toJSDate();
+}
 
 /**
- * Format a class schedule in user's timezone.
+ * Format a class schedule given UTC start, duration, and user timezone.
  */
 export const formatClassSchedule = (
-  utcDateTime: string | Date,
+  utcDateTime: string,
   durationHours: number,
   userTimezone: string
 ): { time: string; date: string; endTime: string } => {
-  const ianaTimezone = getIanaTimeZone(userTimezone);
-  
-  // Parse UTC datetime
-  const utcDate = typeof utcDateTime === 'string' 
-    ? DateTime.fromISO(utcDateTime, { zone: 'utc' })
-    : DateTime.fromJSDate(utcDateTime, { zone: 'utc' });
-  
-  if (!utcDate.isValid) {
-    throw new Error(`Invalid UTC datetime: ${utcDateTime}`);
-  }
-  
-  // Convert to user's timezone
-  let localStartTime = utcDate.setZone(ianaTimezone);
-  
-  // Fallback for IST if timezone conversion didn't work properly
-  if (userTimezone.toUpperCase() === 'IST' && localStartTime.offset !== 330) {
-    localStartTime = utcDate.plus({ hours: 5.5 });
-  }
-  
-  const localEndTime = localStartTime.plus({ hours: durationHours });
-  
-  // Format times in 12-hour format with AM/PM (matching original)
-  const startTime = localStartTime.toFormat('h:mm a');
-  const endTime = localEndTime.toFormat('h:mm a');
-  
-  // Format date to match original format: "Mon 6 Jul"
-  const date = localStartTime.toFormat('ccc d LLL');
-  
+  const localStartTime = convertFromUTC(utcDateTime, userTimezone);
+  const start = DateTime.fromJSDate(localStartTime, { zone: userTimezone });
+
+  const localEndTime = start.plus({ hours: durationHours });
+
   return {
-    time: `${startTime} - ${endTime}`,
-    date,
-    endTime
+    time: `${start.toFormat('h:mm a')} - ${localEndTime.toFormat('h:mm a')}`,
+    date: start.toFormat('ccc d LLL'),
+    endTime: localEndTime.toFormat('h:mm a'),
   };
 };
 
 /**
- * Get next occurrence of repeating class (return Date object like original).
+ * Get the next occurrence of a repeating class.
+ * Returns UTC `Date` object.
  */
 export const getNextRepeatingClassDate = (
   dayOfWeek: number, // 0 = Sunday
   time: string,      // HH:mm
   userTimezone: string
 ): Date => {
-  const ianaTimezone = getIanaTimeZone(userTimezone);
-  
-  // Get current time in user's timezone
-  const now = DateTime.now().setZone(ianaTimezone);
-  
-  // Parse the time string
+
+  const now = DateTime.now().setZone(userTimezone);
+
   const [hours, minutes] = time.split(':').map(Number);
   if (isNaN(hours) || isNaN(minutes)) {
     throw new Error(`Invalid time format: ${time}`);
   }
-  
-  // Create a datetime for today at the specified time
+
   const todayAtTime = now.set({ hour: hours, minute: minutes, second: 0, millisecond: 0 });
-  
-  // Calculate days until the target day of week
-  const currentDayOfWeek = now.weekday % 7; // Convert Luxon's Monday=1 to Sunday=0
-  let daysUntilTarget = (dayOfWeek - currentDayOfWeek + 7) % 7;
-  
-  // If it's the same day but the time has passed, move to next week
-  if (daysUntilTarget === 0 && now > todayAtTime) {
-    daysUntilTarget = 7;
+
+  const currentDay = now.weekday % 7;
+  let daysUntil = (dayOfWeek - currentDay + 7) % 7;
+
+  if (daysUntil === 0 && now > todayAtTime) {
+    daysUntil = 7;
   }
-  
-  // Create the target datetime in user's timezone
-  const targetDateTime = todayAtTime.plus({ days: daysUntilTarget });
-  
-  // Convert to UTC using our convertToUTC function to ensure proper timezone handling
-  const localDateTimeString = targetDateTime.toFormat('yyyy-MM-dd\'T\'HH:mm:ss');
-  return convertToUTC(localDateTimeString, userTimezone);
+
+  const targetLocal = todayAtTime.plus({ days: daysUntil });
+
+  return targetLocal.toUTC().toJSDate();
 };
 
 /**
- * Format a UTC datetime for display in a user's timezone.
+ * Format any UTC datetime for display in user's timezone.
  */
 export const formatDateTimeForDisplay = (
   utcDateTime: string | Date,
   userTimezone: string
 ): { time: string; date: string; fullDateTime: string } => {
-  const ianaTimezone = getIanaTimeZone(userTimezone);
-  
-  // Parse UTC datetime
-  const utcDate = typeof utcDateTime === 'string' 
-    ? DateTime.fromISO(utcDateTime, { zone: 'utc' })
-    : DateTime.fromJSDate(utcDateTime, { zone: 'utc' });
-  
-  if (!utcDate.isValid) {
-    throw new Error(`Invalid UTC datetime: ${utcDateTime}`);
-  }
-  
-  // Convert to user's timezone
-  let localDate = utcDate.setZone(ianaTimezone);
-  
-  // Fallback for IST if timezone conversion didn't work properly
-  if (userTimezone.toUpperCase() === 'IST' && localDate.offset !== 330) {
-    localDate = utcDate.plus({ hours: 5.5 });
-  }
-  
-  // Format time in 12-hour format with AM/PM (matching original)
-  const time = localDate.toFormat('h:mm a');
-  
-  // Format date to match original format: "Mon 6 Jul 2025"
-  const date = localDate.toFormat('ccc d LLL yyyy');
-  
+  const localDate = convertFromUTC(utcDateTime, userTimezone);
+  const dt = DateTime.fromJSDate(localDate, { zone: userTimezone });
+
   return {
-    time,
-    date,
-    fullDateTime: `${date} ${time}`,
+    time: dt.toFormat('h:mm a'),
+    date: dt.toFormat('ccc d LLL yyyy'),
+    fullDateTime: `${dt.toFormat('ccc d LLL yyyy')} ${dt.toFormat('h:mm a')}`,
   };
 };
 
 /**
- * Get the ordinal suffix for a day number.
+ * Get ordinal suffix for day number.
  */
 export const getOrdinalSuffix = (day: number): string => {
   if (day > 3 && day < 21) return 'th';
@@ -235,3 +140,11 @@ export const getOrdinalSuffix = (day: number): string => {
     default: return 'th';
   }
 };
+
+// Test 1: Convert Melbourne time to UTC
+const utcResult = convertToUTC("2025-07-08T12:45:00", "Australia/Melbourne");
+console.log(utcResult.toISOString()); // Should show the UTC time
+
+// Test 2: Convert UTC to Melbourne time (as string)
+const melbourneString = convertFromUTC("2025-07-08T02:45:00.000Z", "Australia/Melbourne");
+console.log(melbourneString); // Should show Melbourne time
