@@ -36,7 +36,7 @@ export const authOptions : NextAuthOptions = {
               }
 
               return {
-                id: `${user.id}`, email: user.email, role: user.role, name: user.name
+                id: `${user.id}`, email: user.email, role: user.role, name: user.name, timezone: user.timezone
               }
             }
         })
@@ -51,7 +51,8 @@ export const authOptions : NextAuthOptions = {
             id: token.id,
             email: token.email,
             role: token.role,
-            name: token.name
+            name: token.name,
+            timezone: token.timezone || 'IST'
           };
         }
         return session;
@@ -62,6 +63,7 @@ export const authOptions : NextAuthOptions = {
           token.email = user.email;
           token.role = user.role;
           token.name = user.name;
+          token.timezone = user.timezone ||  'IST';
         }
         return token;
       }
