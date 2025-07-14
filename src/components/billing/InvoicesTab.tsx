@@ -51,7 +51,7 @@ const InvoicesTab: React.FC<{name: string, apiData?: Invoice[]}> = ({name, apiDa
     }, [apiData]);
 
   return (
-  <div className="bg-gray-800 text-white p-6 rounded-lg flex flex-col h-full w-full">
+  <div className="bg-gray-900 text-white p-6 rounded-lg flex flex-col h-full w-full">
     <h2 className="text-xl font-bold mb-4 shrink-0">{name}</h2>
     <div className="space-y-4 overflow-auto flex-1">
       {invoices.map((item, index) => (

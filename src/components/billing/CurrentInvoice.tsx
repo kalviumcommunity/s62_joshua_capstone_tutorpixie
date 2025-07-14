@@ -22,7 +22,7 @@ interface BillingResponse {
 
 // API function for fetching billing data
 const fetchBillingData = async (): Promise<BillingData> => {
-  const result = await axios.get<BillingResponse>('/api/invoices/current');
+  const result = await axios.get<BillingResponse>('/api/invoices/current-billing');
   
   if (!result || !result.data || !result.data.success) {
     throw new Error(result?.data?.message || 'Failed to fetch billing data');
