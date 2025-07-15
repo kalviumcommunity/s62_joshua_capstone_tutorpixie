@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import PayNow from './PayNow';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
+import { currencyConfigs } from '@/lib/currency';
 
 export interface BillingData {
   totalAmount: number;
@@ -19,6 +20,15 @@ interface BillingResponse {
   data: BillingData;
   message?: string;
 }
+
+export const getCurrencySymbol = (currency: string = 'USD'): string => {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'INR': '₹',
+    'AUD': 'AUD $'
+  };
+  return symbols[currency] || '$';
+};
 
 // API function for fetching billing data
 const fetchBillingData = async (): Promise<BillingData> => {
@@ -55,16 +65,7 @@ export default function CurrentInvoice() {
     }
   });
 
-  const getCurrencySymbol = (currency: string = 'USD'): string => {
-    const symbols: Record<string, string> = {
-      'USD': '$',
-      'INR': '₹',
-      'AUD': 'A$'
-    };
-    return symbols[currency] || '$';
-  };
-
-  const convertAmountToWords = (amount: number): string => {
+  const convertAmountToWords = (amount: number, currency: string = 'USD'): string => {
     const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
     const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
     const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
@@ -96,30 +97,39 @@ export default function CurrentInvoice() {
     };
 
     const parts = [];
-    let dollarsAmount = Math.floor(amount);
-    let centsAmount = Math.round((amount - dollarsAmount) * 100);
+    let wholeAmount = Math.floor(amount);
+    const fractionalAmount = Math.round((amount - wholeAmount) * 100);
 
-    if (dollarsAmount === 0) {
+    if (wholeAmount === 0) {
       parts.push('zero');
     } else {
       let groupIndex = 0;
-      while (dollarsAmount > 0) {
-        const group = dollarsAmount % 1000;
+      while (wholeAmount > 0) {
+        const group = wholeAmount % 1000;
         if (group !== 0) {
           const groupWords = convertHundreds(group);
           parts.unshift(groupWords + (thousands[groupIndex] ? ' ' + thousands[groupIndex] : ''));
         }
-        dollarsAmount = Math.floor(dollarsAmount / 1000);
+        wholeAmount = Math.floor(wholeAmount / 1000);
         groupIndex++;
       }
     }
 
-    if (centsAmount > 0) {
-      parts.push('and ' + convertHundreds(centsAmount));
+    const currencyConfig = currencyConfigs[currency] || currencyConfigs['USD'];
+    const currencyName = currencyConfig.name || 'Dollar';
+
+    const subunit = currency === 'INR' ? 'paise' : 'cents';
+
+    let result = parts.join(' ').replace(/\s+/g, ' ').trim();
+    result += ` ${currencyName}${wholeAmount === 1 ? '' : 's'}`;
+
+    if (fractionalAmount > 0) {
+      result += ` and ${convertHundreds(fractionalAmount)} ${subunit}`;
     }
 
-    return parts.join(' ').replace(/\s+/g, ' ').trim();
+    return result;
   };
+
 
   const getCurrentDateTime = (): string => {
     return new Date().toLocaleString('en-US', {
@@ -209,7 +219,7 @@ export default function CurrentInvoice() {
               })}
             </div>
             <div className="text-xs text-blue-700 capitalize">
-              {convertAmountToWords(billingData.totalAmount)}
+              {convertAmountToWords(billingData.totalAmount, billingData.currency)}
             </div>
           </div>
 
