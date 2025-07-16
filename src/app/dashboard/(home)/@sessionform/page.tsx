@@ -4,32 +4,44 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { convertFromUTC, convertToUTC, getNextRepeatingClassDate, supportedTimezones } from "@/lib/timezone";
+import { toast } from "sonner";
 
 const fetchStudents = async () => {
   const res = await axios.get("/api/user/student");
+  console.log("fetched students");
   return res.data.data;
 };
+
+const fetchStudentRelations = async (tid: number) => {
+  //returns the students and subjects for the given tutor id
+  const res = await axios.get(`/api/user/relation/tutor/${tid}`);
+  console.log("fetched student relations", res.data.data);
+  return res.data.data;
+}
 
 const fetchTutors = async (sid: number) => {
+  //returns the tutors and subject for the given student id
   const res = await axios.get(`/api/user/relation/student/${sid}`);
+  console.log("fetched tutors")
   return res.data.data;
 };
 
-const postSession = async (sessionData) => {
+const postSession = async (sessionData: any) => {
   const res = await axios.post("/api/classes", sessionData);
   return res.data;
 };
 
 const SessionForm = () => {
-  const [sessionType, setSessionType] = useState("repeating");
+  const [sessionType, setSessionType] = useState("one-time");
   const [selectedDay, setSelectedDay] = useState<number | "">("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [timezone, setTimezone] = useState("IST");
   const [duration, setDuration] = useState("");
   const [subject, setSubject] = useState("");
-  const [studentId, setStudentId] = useState<number>();
-  const [tutorId, setTutorId] = useState("");
+  const [studentId, setStudentId] = useState();
+  const [tutorId, setTutorId] = useState();
   const [errorMessage, setErrorMessage] = useState("");
   const { data: session } = useSession();
   const queryClient = useQueryClient();
@@ -40,158 +52,167 @@ const SessionForm = () => {
     enabled: session?.user?.role === "Admin",
   });
 
-  const {
-    data: tutors = [],
-    refetch: refetchTutors,
-  } = useQuery({
+  const { data: studentRelations = [] } = useQuery({
+    queryKey: ["student-relations"],
+    queryFn: () => fetchStudentRelations(tutorId!),
+    enabled: session?.user?.role === "Tutor" && tutorId !== undefined,
+  });
+
+  const { data: tutors = [] } = useQuery({
     queryKey: ["tutors", studentId],
     queryFn: () => fetchTutors(studentId!),
-    enabled: !!studentId,
+    enabled: (session?.user?.role === "Admin" || session?.user?.role == "Student") && studentId !== undefined,
   });
 
   const mutation = useMutation({
     mutationFn: postSession,
+    onMutate: () => {
+      toast.loading("Creating class invite...", { id: "post-class-invite" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["class-invites"] });
+
+      toast.success("Class invite created successfully!", {
+        id: "post-class-invite",
+        style: { color: "green" },
+      });
+
       resetForm();
     },
     onError: () => {
       setErrorMessage("An error occurred while submitting your session request.");
+
+      toast.error("Failed to create class invite.", {
+        id: "post-class-invite",
+        style: { color: "red" },
+      });
     },
   });
 
   useEffect(() => {
     if (session?.user?.role === "Student") {
       setStudentId(session.user.id);
+    } else if(session?.user?.role === "Tutor") {
+      setTutorId(session.user.id);
     }
-  }, [session?.user?.role]);
+
+    if (session?.user?.timezone) {
+      setTimezone(session.user.timezone);
+    }
+  }, [session?.user?.role, session?.user?.timezone]);
 
   const toggleSessionType = (type) => setSessionType(type);
 
   const studentChange = (e) => {
     const sid = parseInt(e.target.value);
     setStudentId(sid);
-    setTutorId("");
+    setTutorId(undefined);
     setSubject("");
   };
 
   const handleSubjectChange = (e) => {
     const id = e.target.value;
     const subject = e.target.selectedOptions[0].getAttribute("data-subject");
-    setTutorId(id);
+    if(session?.user?.role === "Tutor") {
+      setStudentId(id);
+    }else{
+      setTutorId(id);
+    }
     setSubject(subject);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMessage("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setErrorMessage("");
 
-    if (!tutorId || !studentId || !startTime || !duration || !timezone) {
-      setErrorMessage("Please fill out all required fields");
+  if (!tutorId || !studentId || !startTime || !duration || !timezone) {
+    setErrorMessage("Please fill out all required fields");
+    return;
+  }
+
+  if (sessionType === "repeating" && selectedDay === "") {
+    setErrorMessage("Please select a day for repeating sessions");
+    return;
+  }
+
+  if (sessionType === "one-time" && !date) {
+    setErrorMessage("Please select a date for one-time session");
+    return;
+  }
+
+  try {
+    let utcDate: Date;
+
+    if (sessionType === "one-time") {
+      const localDateTime = `${date}T${startTime}:00`;
+      utcDate = convertToUTC(localDateTime, timezone);
+      console.log("UTC ISO:", utcDate.toISOString());
+      const backToLocal = convertFromUTC(utcDate.toISOString(), timezone);
+      // console.log(`Back to ${timezone}: `, DateTime.fromJSDate(backToLocal).setZone(timezone).toFormat("yyyy-MM-dd'T'HH:mm:ss"));
+      console.log(`Back to ${timezone}: `, backToLocal);
+    } else {
+      utcDate = getNextRepeatingClassDate(selectedDay as number, startTime, timezone);
+      console.log("UTC ISO:", utcDate.toISOString());
+      // const backToLocal = convertFromUTC(utcDate.toISOString(), timezone);
+      // console.log(`Back to ${timezone}: `, DateTime.fromJSDate(backToLocal).setZone(timezone).toFormat("yyyy-MM-dd'T'HH:mm:ss"));
+    }
+    const endDateTime = new Date(utcDate.getTime());
+    const durationInMinutes = parseFloat(duration) * 60;
+    endDateTime.setMinutes(endDateTime.getMinutes() + durationInMinutes);
+
+    if (isNaN(endDateTime.getTime())) {
+      setErrorMessage("Error calculating end time. Please check your inputs.");
       return;
     }
 
-    if (sessionType === "repeating" && selectedDay === "") {
-      setErrorMessage("Please select a day for repeating sessions");
-      return;
-    }
+    const sessionData = {
+      subject,
+      tutorId: parseInt(tutorId),
+      studentId: parseInt(studentId),
+      startTime: utcDate.toISOString(),
+      endTime: endDateTime.toISOString(),
+      duration: parseFloat(duration),
+      meetlink: null,
+      repeating: sessionType === "repeating",
+      repeatingDay: sessionType === "repeating" ? selectedDay : null,
+      status: "Pending",
+    };
 
-    if (sessionType === "one-time" && !date) {
-      setErrorMessage("Please select a date for one-time session");
-      return;
-    }
+    console.log("Session Data:", sessionData);
 
-    try {
-      const today = new Date();
-      let startDateTime;
-
-      if (sessionType === "one-time") {
-        startDateTime = new Date(`${date}T${startTime}:00`);
-      } else {
-        const currentDayOfWeek = today.getDay();
-        let daysToAdd = 7;
-        for (let i = 1; i <= 7; i++) {
-          const checkDay = (currentDayOfWeek + i) % 7;
-          if (checkDay === selectedDay) {
-            daysToAdd = i;
-            break;
-          }
-        }
-        const nextClassDate = new Date(today);
-        nextClassDate.setDate(today.getDate() + daysToAdd);
-        const formattedDate = nextClassDate.toISOString().split("T")[0];
-        startDateTime = new Date(`${formattedDate}T${startTime}:00`);
-      }
-
-      if (timezone === "PST") {
-        startDateTime.setHours(startDateTime.getHours() + 13);
-        startDateTime.setMinutes(startDateTime.getMinutes() + 30);
-      } else if (timezone === "GMT") {
-        startDateTime.setHours(startDateTime.getHours() + 5);
-        startDateTime.setMinutes(startDateTime.getMinutes() + 30);
-      }
-
-      const endDateTime = new Date(startDateTime.getTime());
-      const durationInMinutes = parseFloat(duration) * 60;
-      endDateTime.setMinutes(endDateTime.getMinutes() + durationInMinutes);
-
-      if (isNaN(endDateTime.getTime())) {
-        setErrorMessage("Error calculating end time. Please check your inputs.");
-        return;
-      }
-
-      const sessionData = {
-        subject,
-        tutorId: parseInt(tutorId),
-        studentId: studentId,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
-        duration: parseFloat(duration),
-        meetlink: null,
-        repeating: sessionType === "repeating",
-        repeatingDay: sessionType === "repeating" ? selectedDay : null,
-        status: "Pending",
-      };
-
-      mutation.mutate(sessionData);
-    } catch (error) {
-      console.error(error);
-      setErrorMessage("Something went wrong while submitting the session.");
-    }
-  };
+    mutation.mutate(sessionData);
+  } catch (error) {
+    console.error(error);
+    setErrorMessage("Something went wrong while submitting the session.");
+  }
+};
 
   const resetForm = () => {
     setSessionType("repeating");
     setSelectedDay("");
     setDate("");
     setStartTime("");
-    setTimezone("IST");
+    setTimezone(session?.user?.timezone || "Asia/Kolkata");
     setDuration("");
     setSubject("");
     setErrorMessage("");
     if (session?.user?.role !== "Student") {
       setStudentId(undefined);
     }
-    setTutorId("");
+    if(session?.user?.role !== "Tutor"){
+      setTutorId(undefined);
+    }
   };
 
 
   const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
-    <div className="bg-gray-900 text-white p-5 my-4 min-w-max rounded-2xl w-100">
+    <div className="bg-gray-900 text-white p-5 rounded-2xl w-100">
       <h2 className="text-lg h-5 font-semibold text-center">Request a Session</h2>
 
       {/* Toggle Buttons */}
       <div className="flex mt-4 bg-gray-700 rounded-lg p-1">
-        <button
-          className={`flex-1 py-2 rounded-lg ${
-            sessionType === "repeating" ? "bg-blue-400 text-white" : "text-gray-300"
-          }`}
-          onClick={() => toggleSessionType("repeating")}
-        >
-          Repeating
-        </button>
         <button
           className={`flex-1 py-2 rounded-lg ${
             sessionType === "one-time" ? "bg-blue-400 text-white" : "text-gray-300"
@@ -200,12 +221,20 @@ const SessionForm = () => {
         >
           One Time
         </button>
+        <button
+          className={`flex-1 py-2 rounded-lg ${
+            sessionType === "repeating" ? "bg-blue-400 text-white" : "text-gray-300"
+          }`}
+          onClick={() => toggleSessionType("repeating")}
+        >
+          Repeating
+        </button>
       </div>
 
       {
         (session?.user?.role=='Admin' && (students.length>0))&&(
           <div>
-              <select className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg" value={studentId || ""} onChange={studentChange}>
+              <select className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent" value={studentId || ""} onChange={studentChange}>
                 <option disabled value="">Select Student</option>
                 {
                   students.map(student=>(
@@ -218,11 +247,17 @@ const SessionForm = () => {
       }
 
       {/* Subject Dropdown */}
-      <select className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg" value={tutorId || ""} onChange={handleSubjectChange}>
+      <select className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent" value={((session?.user?.role != "Tutor")?tutorId : studentId) || ""} onChange={handleSubjectChange}>
         <option disabled value="">Select Subject</option>
-        {tutors.map(tutor=>(
+        {(session?.user?.role != "Tutor")?
+        tutors.map(tutor=>(
           <option key={tutor.id} value={tutor.tutor.id} data-subject={tutor.subject}>{tutor.tutor.name} - {tutor.subject}</option>
-        ))}
+        ))
+        :
+        studentRelations.map(relation => (
+          <option key={relation.id} value={relation.studentId} data-subject={relation.subject}>{relation.student.name} - {relation.subject}</option>
+        ))
+        }
       </select>
 
       {/* Date Picker (Only for One-Time Sessions) */}
@@ -238,7 +273,7 @@ const SessionForm = () => {
       {/* Day Dropdown (Only for Repeating Sessions) */}
       {sessionType === "repeating" && (
         <select
-          className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg"
+          className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent"
           value={selectedDay}
           onChange={(e) => setSelectedDay(e.target.value === "" ? "" : parseInt(e.target.value))}
         >
@@ -261,31 +296,32 @@ const SessionForm = () => {
         />
         {/* Time Zone */}
         <select
-          className="w-1/2 p-2 bg-white text-gray-800 rounded-lg"
+          className="w-1/2 p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
+          disabled={!!session?.user?.timezone}
         >
           <option value="" disabled>
             Select Time Zone
           </option>
-          <option value="IST">IST</option>
-          <option value="GMT">GMT</option>
-          <option value="PST">PST</option>
+          {supportedTimezones.map(tz => (
+            <option key={tz} value={tz}>{tz}</option>
+          ))}
         </select>
-
       </div>
-        <select
-            className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-        >
-            <option value="" disabled>Duration</option>
-            <option value="0.5">30 mins</option>
-            <option value="0.75">45 mins</option>
-            <option value="1">1 hour</option>
-            <option value="1.5">1.5 hours</option>
-            <option value="2">2 hours</option>
-        </select>
+      
+      <select
+          className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+      >
+          <option value="" disabled>Duration</option>
+          <option value="0.5">30 mins</option>
+          <option value="0.75">45 mins</option>
+          <option value="1">1 hour</option>
+          <option value="1.5">1.5 hours</option>
+          <option value="2">2 hours</option>
+      </select>
 
       {/* Error Message Display */}
       {errorMessage && (
