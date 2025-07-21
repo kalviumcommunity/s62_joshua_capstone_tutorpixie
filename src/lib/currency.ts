@@ -4,11 +4,32 @@ export const supportedCurrencies = [
     "AUD"
 ]
 
+export const currencyConfigs = {
+  'INR': {
+    symbol: '₹',
+    locale: 'en-IN',
+    multiplier: 100, // Razorpay expects amount in paise for INR
+    name: 'Indian Rupee'
+  },
+  'USD': {
+    symbol: '$',
+    locale: 'en-US',
+    multiplier: 100, // Razorpay expects amount in cents for USD
+    name: 'US Dollar'
+  },
+  'AUD': {
+    symbol: 'AUD $',
+    locale: 'en-AU',
+    multiplier: 100, // Razorpay expects amount in cents for AUD
+    name: 'Australian Dollar'
+  }
+};
+
 // Define conversion rates
 const conversionRates: { [key: string]: number } = {
     "INR": 1,
-    "USD": 85.87, // Example rate, adjust as needed
-    "AUD": 55.0  // Example rate, adjust as needed
+    "USD": 85.87, 
+    "AUD": 55.0  
 };
 
 // write a function to convert a given amount from one currency to another
