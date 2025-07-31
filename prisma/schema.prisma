@@ -40,16 +40,17 @@ model user {
   city                 String?
   phone                String?
   subjects             String[]
+  timezone             String?     @default("Asia/Kolkata")
   createdAt            DateTime    @default(now())
+  totalHrs             Float       @default(0.0)
   //tutor specific fields
-  grades               String?
   highestQualification String?
   //student specific fields
   parentName           String?
   parentPhone          String?
   parentEmail          String?
   grade                String?
-  perHr                Int?
+  perHr                Int?        @default(750)
   billingCurrency      currency?
 
   // NextAuth Relations
@@ -57,10 +58,10 @@ model user {
   studentToTutors TutorStudent[] @relation("StudentToTutors")
   tutorSessions   ClassSession[] @relation("TutorSessions")
   studentSessions ClassSession[] @relation("StudentSessions")
+  Invoices        Invoices[]
   accounts        Account[]
   sessions        Session[]
-  TutorInvoices   Invoices[]     @relation("TutorInvoices")
-  StudentInvoices Invoices[]     @relation("StudentInvoices")
+  Payments        Payments[]
 }
 
 //Account and Session are required for 
@@ -93,11 +94,15 @@ model Session {
 }
 
 model TutorStudent {
-  id        Int      @id @default(autoincrement())
-  tutorId   Int
-  studentId Int
-  subject   String
-  createdAt DateTime @default(now())
+  id              Int       @id @default(autoincrement())
+  tutorId         Int
+  studentId       Int
+  subject         String
+  tutorPerHr      Int?      @default(750)
+  tutorCurrency   currency? @default(INR)
+  studentPerHr    Int?      @default(750)
+  studentCurrency currency? @default(INR)
+  createdAt       DateTime  @default(now())
 
   tutor   user @relation("TutorToStudents", fields: [tutorId], references: [id])
   student user @relation("StudentToTutors", fields: [studentId], references: [id])
@@ -130,12 +135,13 @@ model ClassSession {
   repeatingDay  Int?
   status        status   @default(Pending)
 
-  tutor   user @relation("TutorSessions", fields: [tutorId], references: [id])
-  student user @relation("StudentSessions", fields: [studentId], references: [id])
+  tutor          user                  @relation("TutorSessions", fields: [tutorId], references: [id])
+  student        user                  @relation("StudentSessions", fields: [studentId], references: [id])
+  invoiceClasses InvoiceClassSession[]
 }
 
 enum invoiceStatus {
-  paid
+  past
   active
 }
 
@@ -145,14 +151,52 @@ enum currency {
   INR
 }
 
-model Invoices {
-  id        String        @id @default(uuid())
-  tutorId   Int?
-  studentId Int?
-  status    invoiceStatus @default(active)
-  amt       Int
-  currency  currency      @default(INR)
+enum paymentStatus {
+  pending
+  completed
+  failed
+  refunded
+  cancelled
+}
 
-  tutor   user? @relation("TutorInvoices", fields: [tutorId], references: [id])
-  student user? @relation("StudentInvoices", fields: [studentId], references: [id])
+model Payments {
+  id                String         @id @default(uuid())
+  amt               Float          @default(0.0)
+  currency          currency       @default(INR)
+  paymentDate       DateTime       @default(now())
+  paymentMethod     String? // e.g., 'card', 'netbanking', 'upi', etc.
+  razorpayPaymentId String? // For Razorpay integration
+  razorpayOrderId   String? // For Razorpay integration
+  status            paymentStatus? @default(pending)
+  invoicesId        String?
+  userId            Int?
+
+  invoice Invoices? @relation(fields: [invoicesId], references: [id])
+  user    user?     @relation(fields: [userId], references: [id])
+}
+
+model Invoices {
+  id          String        @id @default(uuid())
+  userId      Int
+  status      invoiceStatus @default(active)
+  amt         Float         @default(0.0)
+  currency    currency      @default(INR)
+  isStudent   Boolean       @default(false)
+  invoiceDate DateTime      @default(now())
+  items       Json[]        @default([]) // list of {hrs: 0.0, perHr: 750, subjects: ["Math"]}
+
+  user           user                  @relation(fields: [userId], references: [id])
+  invoiceClasses InvoiceClassSession[]
+  Payments       Payments[]
+}
+
+// Junction table for many-to-many relationship
+model InvoiceClassSession {
+  invoiceId      String
+  classSessionId Int
+
+  invoice      Invoices     @relation(fields: [invoiceId], references: [id])
+  classSession ClassSession @relation(fields: [classSessionId], references: [id])
+
+  @@id([invoiceId, classSessionId])
 }
