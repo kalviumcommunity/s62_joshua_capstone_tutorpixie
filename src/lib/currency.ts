@@ -2,38 +2,47 @@ export const supportedCurrencies = [
     "INR",
     "USD",
     "AUD"
-]
+] as const;
 
-export const currencyConfigs = {
+export type Currency = typeof supportedCurrencies[number];
+
+export const currencyConfigs: Record<Currency, {
+  symbol: string;
+  locale: string;
+  multiplier: number;
+  name: string;
+}> = {
   'INR': {
     symbol: '₹',
     locale: 'en-IN',
-    multiplier: 100, // Razorpay expects amount in paise for INR
+    multiplier: 100,
     name: 'Indian Rupee'
   },
   'USD': {
     symbol: '$',
     locale: 'en-US',
-    multiplier: 100, // Razorpay expects amount in cents for USD
+    multiplier: 100,
     name: 'US Dollar'
   },
   'AUD': {
     symbol: 'AUD $',
     locale: 'en-AU',
-    multiplier: 100, // Razorpay expects amount in cents for AUD
+    multiplier: 100,
     name: 'Australian Dollar'
   }
 };
 
-// Define conversion rates
-const conversionRates: { [key: string]: number } = {
+const conversionRates: Record<Currency, number> = {
     "INR": 1,
-    "USD": 85.87, 
-    "AUD": 55.0  
+    "USD": 85.87,
+    "AUD": 55.0
 };
 
-// write a function to convert a given amount from one currency to another
-export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string): number {
+export function convertCurrency(
+  amount: number,
+  fromCurrency: Currency,
+  toCurrency: Currency
+): number {
     if (fromCurrency === toCurrency) {
         return amount;
     }
@@ -42,21 +51,18 @@ export function convertCurrency(amount: number, fromCurrency: string, toCurrency
         throw new Error("Unsupported currency");
     }
 
-    // Convert amount to base currency (INR)
     const amountInBase = amount / conversionRates[fromCurrency];
-
-    // Convert from base currency to target currency
     return amountInBase * conversionRates[toCurrency];
 }
 
-export function convertToINR(amount: number, currency: string): number {
+export function convertToINR(amount: number, currency: Currency): number {
     if (!conversionRates[currency]) {
         throw new Error("Unsupported currency");
     }
     return amount / conversionRates[currency];
 }
 
-export function convertFromINR(amount: number, currency: string): number {
+export function convertFromINR(amount: number, currency: Currency): number {
     if (!conversionRates[currency]) {
         throw new Error("Unsupported currency");
     }
