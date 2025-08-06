@@ -42,9 +42,9 @@ const SessionForm = () => {
   const [subject, setSubject] = useState("");
   const [studentId, setStudentId] = useState();
   const [tutorId, setTutorId] = useState();
-  const [errorMessage, setErrorMessage] = useState("");
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const [selectedSubjectOption, setSelectedSubjectOption] = useState("");
 
   const { data: students = [] } = useQuery({
     queryKey: ["students"],
@@ -80,7 +80,7 @@ const SessionForm = () => {
       resetForm();
     },
     onError: () => {
-      setErrorMessage("An error occurred while submitting your session request.");
+      toast.error("An error occurred while submitting your session request.");
 
       toast.error("Failed to create class invite.", {
         id: "post-class-invite",
@@ -106,37 +106,41 @@ const SessionForm = () => {
   const studentChange = (e) => {
     const sid = parseInt(e.target.value);
     setStudentId(sid);
-    setTutorId(undefined);
+    setTutorId(null);
     setSubject("");
   };
 
-  const handleSubjectChange = (e) => {
-    const id = e.target.value;
-    const subject = e.target.selectedOptions[0].getAttribute("data-subject");
-    if(session?.user?.role === "Tutor") {
-      setStudentId(id);
-    }else{
-      setTutorId(id);
-    }
-    setSubject(subject);
-  };
+const handleSubjectChange = (e) => {
+  const selectedValue = e.target.value; // This will be the composite key
+  const selectedOption = e.target.selectedOptions[0];
+  const id = selectedOption.getAttribute("data-id");
+  const subject = selectedOption.getAttribute("data-subject");
+  
+  if(session?.user?.role === "Tutor") {
+    setStudentId(parseInt(id));
+  } else {
+    console.log("Setting tutor ID:", id);
+    setTutorId(parseInt(id));
+  }
+  setSubject(subject);
+  setSelectedSubjectOption(selectedValue);
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
-  setErrorMessage("");
 
   if (!tutorId || !studentId || !startTime || !duration || !timezone) {
-    setErrorMessage("Please fill out all required fields");
+    toast.error("Please fill out all required fields");
     return;
   }
 
   if (sessionType === "repeating" && selectedDay === "") {
-    setErrorMessage("Please select a day for repeating sessions");
+    toast.error("Please select a day for repeating sessions");
     return;
   }
 
   if (sessionType === "one-time" && !date) {
-    setErrorMessage("Please select a date for one-time session");
+    toast.error("Please select a date for one-time session");
     return;
   }
 
@@ -161,7 +165,7 @@ const handleSubmit = async (e) => {
     endDateTime.setMinutes(endDateTime.getMinutes() + durationInMinutes);
 
     if (isNaN(endDateTime.getTime())) {
-      setErrorMessage("Error calculating end time. Please check your inputs.");
+      toast.error("Error calculating end time. Please check your inputs.");
       return;
     }
 
@@ -178,24 +182,22 @@ const handleSubmit = async (e) => {
       status: "Pending",
     };
 
-    console.log("Session Data:", sessionData);
-
     mutation.mutate(sessionData);
   } catch (error) {
-    console.error(error);
-    setErrorMessage("Something went wrong while submitting the session.");
+    toast.error("Something went wrong while submitting the session.");
   }
 };
 
   const resetForm = () => {
-    setSessionType("repeating");
+    setSessionType("one-time");
     setSelectedDay("");
     setDate("");
     setStartTime("");
     setTimezone(session?.user?.timezone || "Asia/Kolkata");
     setDuration("");
     setSubject("");
-    setErrorMessage("");
+    setSelectedSubjectOption(""); // Add this line
+    toast.error("");
     if (session?.user?.role !== "Student") {
       setStudentId(undefined);
     }
@@ -247,18 +249,43 @@ const handleSubmit = async (e) => {
       }
 
       {/* Subject Dropdown */}
-      <select className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent" value={((session?.user?.role != "Tutor")?tutorId : studentId) || ""} onChange={handleSubjectChange}>
+      <select 
+        className="mt-4 w-full p-2 bg-white text-gray-800 rounded-lg border-x-4 border-transparent" 
+        value={selectedSubjectOption} 
+        onChange={handleSubjectChange}
+      >
         <option disabled value="">Select Subject</option>
-        {(session?.user?.role != "Tutor")?
-        tutors.map(tutor=>(
-          <option key={tutor.id} value={tutor.tutor.id} data-subject={tutor.subject}>{tutor.tutor.name} - {tutor.subject}</option>
-        ))
-        :
-        studentRelations.map(relation => (
-          <option key={relation.id} value={relation.studentId} data-subject={relation.subject}>{relation.student.name} - {relation.subject}</option>
-        ))
+        {(session?.user?.role != "Tutor") ?
+          tutors.map((tutor, index) => {
+            const optionValue = `tutor-${tutor.tutor.id}-${tutor.subject}-${index}`;
+            return (
+              <option 
+                key={optionValue} 
+                value={optionValue} 
+                data-id={tutor.tutor.id}
+                data-subject={tutor.subject}
+              >
+                {tutor.tutor.name} - {tutor.subject}
+              </option>
+            );
+          })
+          :
+          studentRelations.map((relation, index) => {
+            const optionValue = `student-${relation.studentId}-${relation.subject}-${index}`;
+            return (
+              <option 
+                key={optionValue} 
+                value={optionValue} 
+                data-id={relation.studentId}
+                data-subject={relation.subject}
+              >
+                {relation.student.name} - {relation.subject}
+              </option>
+            );
+          })
         }
       </select>
+
 
       {/* Date Picker (Only for One-Time Sessions) */}
       {sessionType === "one-time" && (
@@ -323,15 +350,8 @@ const handleSubmit = async (e) => {
           <option value="2">2 hours</option>
       </select>
 
-      {/* Error Message Display */}
-      {errorMessage && (
-        <div className="mt-3 py-2 px-3 bg-red-500 text-white rounded-lg">
-          {errorMessage}
-        </div>
-      )}
-
       {/* Submit Button */}
-      <button className="mt-6 w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg" onClick={handleSubmit}>
+      <button className="mt-3 w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg" onClick={handleSubmit}>
         Request Session
       </button>
     </div>
