@@ -59,12 +59,12 @@ export function convertToINR(amount: number, currency: Currency): number {
     if (!conversionRates[currency]) {
         throw new Error("Unsupported currency");
     }
-    return amount / conversionRates[currency];
+    return amount * conversionRates[currency];
 }
 
 export function convertFromINR(amount: number, currency: Currency): number {
     if (!conversionRates[currency]) {
         throw new Error("Unsupported currency");
     }
-    return amount * conversionRates[currency];
+    return amount / conversionRates[currency];
 }
