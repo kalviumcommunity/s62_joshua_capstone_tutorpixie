@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Script from "next/script";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import { currencyConfigs } from "@/lib/currency";
 
 declare global {
   interface Window {
@@ -44,6 +45,21 @@ const PayNow: React.FC<PayNowProps> = ({
     setScriptLoaded(false);
   };
 
+  // Currency configuration
+  const getCurrencyConfig = (currency: string) => {
+    return currencyConfigs[currency as keyof typeof currencyConfigs] || currencyConfigs.INR;
+  };
+
+  const currencyConfig = getCurrencyConfig(currency);
+
+  const formatAmount = (amount: number, currency: string) => {
+    const config = getCurrencyConfig(currency);
+    return amount.toLocaleString(config.locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
   const handlePayment = async () => {
     if (!user) {
       setError("User not found. Please log in to continue.");
@@ -75,7 +91,7 @@ const PayNow: React.FC<PayNowProps> = ({
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: amount * 100, 
+        amount: amount * currencyConfig.multiplier, // Use currency-specific multiplier
         currency: currency,
         name: "TutorPixie",
         description: "Invoice Payment",
@@ -191,10 +207,7 @@ const PayNow: React.FC<PayNowProps> = ({
         ) : (!scriptLoaded || !window.Razorpay) ? (
           'Loading...'
         ) : (
-          `Pay ₹${amount.toLocaleString('en-IN', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-          })}`
+          `Pay ${currencyConfig.symbol}${formatAmount(amount, currency)}`
         )}
       </button>
     </div>

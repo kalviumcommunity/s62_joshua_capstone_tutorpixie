@@ -1,12 +1,15 @@
 "use client";
 import React, { useMemo } from "react";
 import InvoiceCard from "./InvoiceCard";
+import { getCurrencySymbol } from "./CurrentInvoice";
 
 interface Invoice {
   id: number;
   amt: number;
   currency: string;
-  username?: string;
+  user?: {
+    name: string;
+  };
   invoiceDate?: string;
 }
 
@@ -23,10 +26,10 @@ const InvoicesTab: React.FC<{name: string, apiData?: Invoice[]}> = ({name, apiDa
     };
 
     const formatAmount = (amount: number, curr: string) => {
-        return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: curr,
-        }).format(amount);
+      return `${getCurrencySymbol(curr)}${amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
     };
 
   // Use useMemo to transform data only when apiData changes
@@ -44,14 +47,14 @@ const InvoicesTab: React.FC<{name: string, apiData?: Invoice[]}> = ({name, apiDa
         return {
             id: invoiceItem.id,
             amt: formattedAmount,
-            name: invoiceItem.username,
+            name: invoiceItem?.user?.name || undefined,
             invoiceDate: formattedDate
         };
         });
     }, [apiData]);
 
   return (
-  <div className="bg-gray-800 text-white p-6 rounded-lg flex flex-col h-full w-full">
+  <div className="bg-gray-900 text-white p-6 rounded-lg flex flex-col h-full w-full">
     <h2 className="text-xl font-bold mb-4 shrink-0">{name}</h2>
     <div className="space-y-4 overflow-auto flex-1">
       {invoices.map((item, index) => (

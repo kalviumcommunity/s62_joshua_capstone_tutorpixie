@@ -113,7 +113,7 @@ const InvoiceCard = ({
             </div>
             <div className="flex flex-col">
               {name && (
-                <h3 className="font-semibold text-base text-gray-900 leading-tight">
+                <h3 className="font-semibold text-sm pl-2 pb-2 text-gray-700 leading-tight">
                   {name}
                 </h3>
               )}
