@@ -54,7 +54,7 @@ export const convertToUTC = (localDateTime: string, timezone: string): Date => {
  * @param targetTimeZone - IANA timezone identifier (e.g., 'Australia/Melbourne')
  * @returns Date object representing the equivalent local time (NOTE: JS Date is always UTC internally)
  */
-export function convertFromUTC(utcTime: string, targetTimeZone: string): string {
+export function convertFromUTC(utcTime: string, targetTimeZone: string): Date {
   const localDateTime = DateTime.fromISO(utcTime, { zone: 'utc' }).setZone(targetTimeZone)
   // return localDateTime.toFormat("yyyy-MM-dd'T'HH:mm:ss");
   return localDateTime.toJSDate();
