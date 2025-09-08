@@ -140,11 +140,3 @@ export const getOrdinalSuffix = (day: number): string => {
     default: return 'th';
   }
 };
-
-// Test 1: Convert Melbourne time to UTC
-const utcResult = convertToUTC("2025-07-08T12:45:00", "Australia/Melbourne");
-console.log(utcResult.toISOString()); // Should show the UTC time
-
-// Test 2: Convert UTC to Melbourne time (as string)
-const melbourneString = convertFromUTC("2025-07-08T02:45:00.000Z", "Australia/Melbourne");
-console.log(melbourneString); // Should show Melbourne time
